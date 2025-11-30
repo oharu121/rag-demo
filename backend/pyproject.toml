@@ -1,0 +1,30 @@
+[project]
+name = "rag-backend"
+version = "1.0.0"
+description = "RAGドキュメント検索デモ用バックエンドAPI"
+requires-python = ">=3.12"
+dependencies = [
+    # Web Framework
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "python-multipart>=0.0.9",
+    "pydantic-settings>=2.0",
+    # LangChain
+    "langchain>=0.3",
+    "langchain-community>=0.3",
+    "langchain-chroma>=0.1",
+    "langchain-google-genai>=2.0",
+    "langchain-huggingface>=0.1",
+    # Vector DB & ML
+    "chromadb>=0.5",
+    "sentence-transformers>=3.0",
+    # Utils
+    "python-dotenv>=1.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
