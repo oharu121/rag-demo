@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import type { Message, Source, SSEEvent } from "@/lib/types";
-import { streamChat, parseSourcesFromAPI } from "@/lib/api";
-import { UI_TEXT } from "@/lib/constants";
+import type { Message, Source, SSEEvent } from "../lib/types";
+import { streamChat, parseSourcesFromAPI } from "../lib/api";
+import { UI_TEXT } from "../lib/constants";
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 15);

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { UI_TEXT } from "@/lib/constants";
-import { useDocuments } from "@/hooks/useDocuments";
+import { UI_TEXT } from "../../lib/constants";
+import { useDocuments } from "../../hooks/useDocuments";
 import { DocumentList } from "./DocumentList";
 import { DocumentUpload } from "./DocumentUpload";
 import { LoadingSpinner } from "./LoadingSpinner";

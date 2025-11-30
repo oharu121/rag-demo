@@ -1,6 +1,6 @@
 "use client";
 
-import { UI_TEXT } from "@/lib/constants";
+import { UI_TEXT } from "../../lib/constants";
 
 interface ServerStartingOverlayProps {
   isVisible: boolean;

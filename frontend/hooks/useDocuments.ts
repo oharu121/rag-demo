@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import type { Document } from "@/lib/types";
+import type { Document } from "../lib/types";
 import {
   fetchDocuments,
   uploadDocument,
   deleteDocument,
   rebuildVectorstore,
-} from "@/lib/api";
-import { UI_TEXT, UPLOAD_CONFIG } from "@/lib/constants";
+} from "../lib/api";
+import { UI_TEXT, UPLOAD_CONFIG } from "../lib/constants";
 
 export function useDocuments() {
   const [documents, setDocuments] = useState<Document[]>([]);
