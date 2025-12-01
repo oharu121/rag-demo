@@ -9,8 +9,10 @@ import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
 import { DocumentDrawer } from "./DocumentDrawer";
 import { DocumentPreviewModal } from "./DocumentPreviewModal";
+import { DocumentChipsBar } from "./DocumentChipsBar";
 import { ServerStartingOverlay } from "./ServerStartingOverlay";
 import { OnboardingTooltip } from "./OnboardingTooltip";
+import { PreviewHintCallout } from "./PreviewHintCallout";
 import type { Document } from "@/lib/types";
 
 export function ChatInterface() {
@@ -20,9 +22,11 @@ export function ChatInterface() {
   const { sampleDocuments, uploadedDocuments } = documentsHook;
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
+  const [showPreviewHint, setShowPreviewHint] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const documentButtonRef = useRef<HTMLButtonElement>(null);
+  const documentChipsRef = useRef<HTMLDivElement>(null);
 
   const totalDocuments = sampleDocuments.length + uploadedDocuments.length;
   const allDocuments = [...sampleDocuments, ...uploadedDocuments];
@@ -97,6 +101,14 @@ export function ChatInterface() {
             </button>
           </div>
         </header>
+
+        {/* Persistent document chips bar */}
+        <DocumentChipsBar
+          ref={documentChipsRef}
+          documents={allDocuments}
+          onPreview={setPreviewDoc}
+          onShowMore={() => setIsDrawerOpen(true)}
+        />
 
         {/* Messages area */}
         <main className="flex-1 overflow-y-auto">
@@ -179,64 +191,15 @@ export function ChatInterface() {
                   {UI_TEXT.welcomeMessage}
                 </h2>
 
-                {/* Document preview section */}
+                {/* Document info section */}
                 {totalDocuments > 0 ? (
-                  <div className="mt-6 mb-8">
-                    <p className="text-gray-500 mb-4">{UI_TEXT.welcomeWithDocs}</p>
-
-                    {/* Document chips */}
-                    <div className="flex flex-wrap justify-center gap-2 max-w-lg mx-auto">
-                      {allDocuments.slice(0, 5).map((doc, i) => (
-                        <button
-                          key={doc.id}
-                          onClick={() => setPreviewDoc(doc)}
-                          className="group flex items-center gap-2 px-3 py-2 bg-white border border-gray-200
-                                   rounded-xl hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-md
-                                   transition-all duration-200 animate-fade-in-up"
-                          style={{ animationDelay: `${i * 50}ms` }}
-                        >
-                          <div className="w-6 h-6 rounded-lg bg-linear-to-br from-blue-100 to-indigo-100
-                                        flex items-center justify-center group-hover:from-blue-200 group-hover:to-indigo-200 transition-colors">
-                            <svg
-                              className="w-3.5 h-3.5 text-blue-600"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                              />
-                            </svg>
-                          </div>
-                          <span className="text-sm text-gray-700 group-hover:text-blue-600 truncate max-w-[120px]">
-                            {doc.filename.replace(/\.txt$/, "")}
-                          </span>
-                        </button>
-                      ))}
-                      {totalDocuments > 5 && (
-                        <button
-                          onClick={() => setIsDrawerOpen(true)}
-                          className="px-3 py-2 text-sm text-gray-500 hover:text-blue-600 transition-colors"
-                        >
-                          +{totalDocuments - 5} more
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Manage documents link */}
-                    <button
-                      onClick={() => setIsDrawerOpen(true)}
-                      className="mt-4 inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-blue-600 transition-colors"
-                    >
-                      <span>{UI_TEXT.manageDocuments}</span>
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </div>
+                  <p className="text-gray-500 mt-3 mb-8">
+                    {UI_TEXT.welcomeWithDocs}
+                    <br />
+                    <span className="text-sm text-gray-400">
+                      上のドキュメントをクリックしてプレビュー
+                    </span>
+                  </p>
                 ) : (
                   <p className="text-gray-500 max-w-md mx-auto leading-relaxed mt-3 mb-8">
                     <span className="text-gray-400">
@@ -297,8 +260,22 @@ export function ChatInterface() {
         {!isStarting && showOnboarding && (
           <OnboardingTooltip
             documentCount={totalDocuments}
-            onDismiss={() => setShowOnboarding(false)}
+            onDismiss={() => {
+              setShowOnboarding(false);
+              // Show preview hint after onboarding if there are documents
+              if (totalDocuments > 0) {
+                setTimeout(() => setShowPreviewHint(true), 300);
+              }
+            }}
             targetRef={documentButtonRef}
+          />
+        )}
+
+        {/* Preview hint callout - show after onboarding is dismissed */}
+        {showPreviewHint && totalDocuments > 0 && (
+          <PreviewHintCallout
+            onDismiss={() => setShowPreviewHint(false)}
+            targetRef={documentChipsRef}
           />
         )}
 

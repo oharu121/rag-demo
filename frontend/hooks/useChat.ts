@@ -14,12 +14,14 @@ export function useChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const isLoadingRef = useRef(false);
 
   const sendMessage = useCallback(async (content: string) => {
-    if (!content.trim() || isLoading) return;
+    if (!content.trim() || isLoadingRef.current) return;
 
     setError(null);
     setIsLoading(true);
+    isLoadingRef.current = true;
 
     // Add user message
     const userMessage: Message = {
@@ -38,16 +40,22 @@ export function useChat() {
       isStreaming: true,
     };
 
-    setMessages((prev) => [...prev, userMessage, assistantMessage]);
+    // Capture current history BEFORE adding new messages using functional update
+    let capturedHistory: Pick<Message, "role" | "content">[] = [];
+    setMessages((prev) => {
+      // Capture current messages for history
+      capturedHistory = prev.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+      return [...prev, userMessage, assistantMessage];
+    });
 
     try {
       abortControllerRef.current = new AbortController();
 
-      // Get history for context (exclude the new messages)
-      const history = messages.map((m) => ({
-        role: m.role,
-        content: m.content,
-      }));
+      // Use captured history (avoids stale closure)
+      const history = capturedHistory;
 
       let sources: Source[] = [];
       let fullContent = "";
@@ -113,9 +121,10 @@ export function useChat() {
       );
     } finally {
       setIsLoading(false);
+      isLoadingRef.current = false;
       abortControllerRef.current = null;
     }
-  }, [messages, isLoading]);
+  }, []); // No dependencies - uses refs and functional state updates
 
   const clearMessages = useCallback(() => {
     setMessages([]);

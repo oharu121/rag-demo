@@ -62,6 +62,10 @@ export const UI_TEXT = {
   onboardingDismiss: "OK",
   manageDocuments: "ドキュメントを管理",
 
+  // Preview hint callout
+  previewHintTitle: "ドキュメントをプレビュー",
+  previewHintMessage: "クリックするとドキュメントの内容を確認できます。",
+
   // Welcome screen
   welcomeWithDocs: "以下のドキュメントについて質問できます",
 

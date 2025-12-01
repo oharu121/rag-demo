@@ -71,8 +71,11 @@ export function DocumentPreviewModal({
         onClick={onClose}
       />
 
-      {/* Modal */}
-      <div className="fixed inset-4 md:inset-8 lg:inset-12 z-50 flex items-center justify-center">
+      {/* Modal container - click outside modal to close */}
+      <div
+        className="fixed inset-4 md:inset-8 lg:inset-12 z-50 flex items-center justify-center"
+        onClick={onClose}
+      >
         <div
           className="w-full h-full max-w-4xl mx-auto bg-white rounded-2xl shadow-2xl
                      flex flex-col animate-scale-in overflow-hidden"
