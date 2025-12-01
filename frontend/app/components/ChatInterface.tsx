@@ -3,17 +3,39 @@
 import { useRef, useEffect, useState } from "react";
 import { useChat } from "@/hooks/useChat";
 import { useServerStatus } from "@/hooks/useServerStatus";
+import { useDocuments } from "@/hooks/useDocuments";
 import { UI_TEXT } from "@/lib/constants";
 import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
 import { DocumentDrawer } from "./DocumentDrawer";
 import { ServerStartingOverlay } from "./ServerStartingOverlay";
+import { OnboardingTooltip } from "./OnboardingTooltip";
 
 export function ChatInterface() {
   const { messages, isLoading, error, sendMessage, clearError } = useChat();
   const { isReady, isStarting } = useServerStatus();
+  const documentsHook = useDocuments();
+  const { sampleDocuments, uploadedDocuments } = documentsHook;
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const totalDocuments = sampleDocuments.length + uploadedDocuments.length;
+  const allDocuments = [...sampleDocuments, ...uploadedDocuments];
+  const hasSampleDocs = sampleDocuments.length > 0;
+
+  // Get suggested prompts based on document type
+  const suggestedPrompts = hasSampleDocs
+    ? [
+        "会社の休暇制度について教えて",
+        "リモートワークのポリシーは?",
+        "経費精算の方法は?",
+      ]
+    : [
+        UI_TEXT.genericPrompt1,
+        UI_TEXT.genericPrompt2,
+        UI_TEXT.genericPrompt3,
+      ];
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -39,10 +61,11 @@ export function ChatInterface() {
             </div>
             <button
               onClick={() => setIsDrawerOpen(true)}
-              className="group flex items-center gap-2.5 px-5 py-2.5 text-sm font-medium
+              className={`group flex items-center gap-2.5 px-5 py-2.5 text-sm font-medium
                        text-gray-700 bg-white/80 rounded-xl border border-gray-200/60
                        hover:bg-white hover:border-gray-300 hover:shadow-lg
-                       active:scale-[0.98] transition-all duration-200"
+                       active:scale-[0.98] transition-all duration-200
+                       ${showOnboarding ? "animate-pulse-glow" : ""}`}
             >
               <svg
                 className="w-5 h-5 text-gray-500 group-hover:text-blue-600 transition-colors"
@@ -60,6 +83,12 @@ export function ChatInterface() {
               <span className="group-hover:text-gray-900 transition-colors">
                 {UI_TEXT.openDocuments}
               </span>
+              {/* Document count badge */}
+              {totalDocuments > 0 && (
+                <span className="ml-1 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full">
+                  {totalDocuments}
+                </span>
+              )}
             </button>
           </div>
         </header>
@@ -116,8 +145,8 @@ export function ChatInterface() {
 
             {/* Welcome message when empty - Premium hero section */}
             {messages.length === 0 && (
-              <div className="text-center py-16 animate-fade-in-up">
-                <div className="relative w-24 h-24 mx-auto mb-6">
+              <div className="text-center py-12 animate-fade-in-up">
+                <div className="relative w-20 h-20 mx-auto mb-5">
                   {/* Glow effect */}
                   <div className="absolute inset-0 bg-blue-400/20 rounded-full blur-xl animate-pulse" />
                   {/* Icon container */}
@@ -127,7 +156,7 @@ export function ChatInterface() {
                                 transform hover:scale-105 transition-transform duration-300"
                   >
                     <svg
-                      className="w-12 h-12 text-white"
+                      className="w-10 h-10 text-white"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -141,36 +170,94 @@ export function ChatInterface() {
                     </svg>
                   </div>
                 </div>
-                <h2 className="text-2xl font-semibold text-gray-900 mb-3">
+                <h2 className="text-2xl font-semibold text-gray-900 mb-2">
                   {UI_TEXT.welcomeMessage}
                 </h2>
-                <p className="text-gray-500 max-w-md mx-auto leading-relaxed">
-                  サンプルドキュメントが読み込まれています。
-                  <br />
-                  <span className="text-gray-400">
-                    右上のボタンからドキュメントを追加することもできます。
-                  </span>
-                </p>
-                {/* Suggested prompts */}
-                <div className="mt-8 flex flex-wrap justify-center gap-3">
-                  {[
-                    "会社の休暇制度について教えて",
-                    "リモートワークのポリシーは?",
-                    "経費精算の方法は?",
-                  ].map((prompt, i) => (
+
+                {/* Document preview section */}
+                {totalDocuments > 0 ? (
+                  <div className="mt-6 mb-8">
+                    <p className="text-gray-500 mb-4">{UI_TEXT.welcomeWithDocs}</p>
+
+                    {/* Document chips */}
+                    <div className="flex flex-wrap justify-center gap-2 max-w-lg mx-auto">
+                      {allDocuments.slice(0, 5).map((doc, i) => (
+                        <button
+                          key={doc.id}
+                          onClick={() => setIsDrawerOpen(true)}
+                          className="group flex items-center gap-2 px-3 py-2 bg-white border border-gray-200
+                                   rounded-xl hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-md
+                                   transition-all duration-200 animate-fade-in-up"
+                          style={{ animationDelay: `${i * 50}ms` }}
+                        >
+                          <div className="w-6 h-6 rounded-lg bg-linear-to-br from-blue-100 to-indigo-100
+                                        flex items-center justify-center group-hover:from-blue-200 group-hover:to-indigo-200 transition-colors">
+                            <svg
+                              className="w-3.5 h-3.5 text-blue-600"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              />
+                            </svg>
+                          </div>
+                          <span className="text-sm text-gray-700 group-hover:text-blue-600 truncate max-w-[120px]">
+                            {doc.filename.replace(/\.txt$/, "")}
+                          </span>
+                        </button>
+                      ))}
+                      {totalDocuments > 5 && (
+                        <button
+                          onClick={() => setIsDrawerOpen(true)}
+                          className="px-3 py-2 text-sm text-gray-500 hover:text-blue-600 transition-colors"
+                        >
+                          +{totalDocuments - 5} more
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Manage documents link */}
                     <button
-                      key={i}
-                      onClick={() => sendMessage(prompt)}
-                      disabled={!isReady}
-                      className="px-4 py-2.5 text-sm text-gray-600 bg-white border border-gray-200
-                               rounded-xl hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50/50
-                               hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed
-                               transition-all duration-200"
+                      onClick={() => setIsDrawerOpen(true)}
+                      className="mt-4 inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-blue-600 transition-colors"
                     >
-                      {prompt}
+                      <span>{UI_TEXT.manageDocuments}</span>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
                     </button>
-                  ))}
-                </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 max-w-md mx-auto leading-relaxed mt-3 mb-8">
+                    <span className="text-gray-400">
+                      右上のボタンからドキュメントを追加してください。
+                    </span>
+                  </p>
+                )}
+
+                {/* Suggested prompts - conditional based on document type */}
+                {totalDocuments > 0 && (
+                  <div className="flex flex-wrap justify-center gap-3">
+                    {suggestedPrompts.map((prompt, i) => (
+                      <button
+                        key={i}
+                        onClick={() => sendMessage(prompt)}
+                        disabled={!isReady}
+                        className="px-4 py-2.5 text-sm text-gray-600 bg-white border border-gray-200
+                                 rounded-xl hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50/50
+                                 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed
+                                 transition-all duration-200"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -198,7 +285,16 @@ export function ChatInterface() {
         <DocumentDrawer
           isOpen={isDrawerOpen}
           onClose={() => setIsDrawerOpen(false)}
+          documentsHook={documentsHook}
         />
+
+        {/* Onboarding tooltip - only show when server is ready and not starting */}
+        {!isStarting && showOnboarding && (
+          <OnboardingTooltip
+            documentCount={totalDocuments}
+            onDismiss={() => setShowOnboarding(false)}
+          />
+        )}
       </div>
     </>
   );

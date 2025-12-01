@@ -56,6 +56,19 @@ export const UI_TEXT = {
   // Citations
   sourceLabel: "出典",
   linesLabel: "行",
+
+  // Onboarding
+  onboardingMessage: "すぐに質問を始められます。自分のドキュメントをアップロードすることもできます。",
+  onboardingDismiss: "OK",
+  manageDocuments: "ドキュメントを管理",
+
+  // Welcome screen
+  welcomeWithDocs: "以下のドキュメントについて質問できます",
+
+  // Generic prompts (for user-uploaded documents)
+  genericPrompt1: "この文書の要約を教えて",
+  genericPrompt2: "主なポイントは何ですか？",
+  genericPrompt3: "重要な情報をリストアップして",
 } as const;
 
 // API Configuration

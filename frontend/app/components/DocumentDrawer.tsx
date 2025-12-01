@@ -7,12 +7,17 @@ import { DocumentList } from "./DocumentList";
 import { DocumentUpload } from "./DocumentUpload";
 import { LoadingSpinner } from "./LoadingSpinner";
 
+type DocumentsHookReturn = ReturnType<typeof useDocuments>;
+
 interface DocumentDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  documentsHook?: DocumentsHookReturn;
 }
 
-export function DocumentDrawer({ isOpen, onClose }: DocumentDrawerProps) {
+export function DocumentDrawer({ isOpen, onClose, documentsHook }: DocumentDrawerProps) {
+  // Use provided hook or create our own
+  const internalHook = useDocuments();
   const {
     sampleDocuments,
     uploadedDocuments,
@@ -24,7 +29,7 @@ export function DocumentDrawer({ isOpen, onClose }: DocumentDrawerProps) {
     remove,
     rebuild,
     clearError,
-  } = useDocuments();
+  } = documentsHook || internalHook;
 
   // Close on escape key
   useEffect(() => {
