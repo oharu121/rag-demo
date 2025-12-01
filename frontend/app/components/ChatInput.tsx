@@ -10,6 +10,7 @@ interface ChatInputProps {
 
 export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
   const [input, setInput] = useState("");
+  const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Auto-resize textarea
@@ -39,41 +40,67 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
     }
   };
 
+  const canSend = input.trim() && !disabled;
+
   return (
-    <div className="border-t border-gray-200 bg-white p-4">
-      <div className="max-w-3xl mx-auto">
-        <div className="flex items-end gap-3">
+    <div className="glass border-t border-white/20 p-4 shadow-lg shadow-gray-200/50">
+      <div className="max-w-4xl mx-auto">
+        <div
+          className={`relative flex items-end gap-3 p-2 bg-white rounded-2xl border-2 transition-all duration-200 ${
+            isFocused
+              ? "border-blue-400 shadow-lg shadow-blue-100/50"
+              : "border-gray-200 hover:border-gray-300"
+          }`}
+        >
           <div className="flex-1 relative">
             <textarea
               ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
               placeholder={UI_TEXT.inputPlaceholder}
               disabled={disabled}
               rows={1}
-              className="w-full resize-none rounded-xl border border-gray-300
-                       px-4 py-3 pr-12 text-base
-                       focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20
-                       disabled:bg-gray-100 disabled:cursor-not-allowed
+              className="w-full resize-none bg-transparent px-3 py-2.5 text-base
+                       focus:outline-none disabled:text-gray-400
                        placeholder:text-gray-400"
-              style={{ minHeight: "48px", maxHeight: "150px" }}
+              style={{ minHeight: "44px", maxHeight: "150px" }}
             />
           </div>
           <button
             onClick={handleSubmit}
-            disabled={disabled || !input.trim()}
-            className="shrink-0 h-12 px-6 rounded-xl
-                     bg-blue-600 text-white font-medium
-                     hover:bg-blue-700 active:bg-blue-800
-                     disabled:bg-gray-300 disabled:cursor-not-allowed
-                     transition-colors"
+            disabled={!canSend}
+            className={`shrink-0 h-11 w-11 rounded-xl flex items-center justify-center
+                     transition-all duration-200 ${
+                       canSend
+                         ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/30 hover:shadow-lg hover:shadow-blue-500/40 hover:scale-105 active:scale-95"
+                         : "bg-gray-100 text-gray-400"
+                     }`}
+            aria-label="送信"
           >
-            {UI_TEXT.sendButton}
+            <svg
+              className={`w-5 h-5 transition-transform duration-200 ${canSend ? "translate-x-0.5" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
+              />
+            </svg>
           </button>
         </div>
-        <p className="mt-2 text-xs text-gray-500 text-center">
-          Enterで送信、Shift + Enterで改行
+        <p className="mt-2.5 text-xs text-gray-400 text-center flex items-center justify-center gap-2">
+          <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-500 font-mono text-[10px]">Enter</kbd>
+          <span>で送信</span>
+          <span className="text-gray-300">•</span>
+          <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-500 font-mono text-[10px]">Shift + Enter</kbd>
+          <span>で改行</span>
         </p>
       </div>
     </div>

@@ -54,43 +54,63 @@ export function DocumentUpload({ onUpload, isUploading }: DocumentUploadProps) {
 
   return (
     <div
-      className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${
+      className={`relative border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 ${
         isDragging
-          ? "border-blue-500 bg-blue-50"
-          : "border-gray-300 hover:border-gray-400"
+          ? "border-blue-400 bg-blue-50/50 scale-[1.02] shadow-lg shadow-blue-100/50"
+          : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
       }`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* Decorative corner elements */}
+      <div className={`absolute top-3 left-3 w-3 h-3 border-l-2 border-t-2 rounded-tl-lg transition-colors ${isDragging ? "border-blue-400" : "border-gray-300"}`} />
+      <div className={`absolute top-3 right-3 w-3 h-3 border-r-2 border-t-2 rounded-tr-lg transition-colors ${isDragging ? "border-blue-400" : "border-gray-300"}`} />
+      <div className={`absolute bottom-3 left-3 w-3 h-3 border-l-2 border-b-2 rounded-bl-lg transition-colors ${isDragging ? "border-blue-400" : "border-gray-300"}`} />
+      <div className={`absolute bottom-3 right-3 w-3 h-3 border-r-2 border-b-2 rounded-br-lg transition-colors ${isDragging ? "border-blue-400" : "border-gray-300"}`} />
+
       {isUploading ? (
-        <div className="flex flex-col items-center gap-2">
-          <LoadingSpinner size="lg" />
-          <p className="text-sm text-gray-600">アップロード中...</p>
+        <div className="flex flex-col items-center gap-3 py-4">
+          <div className="relative">
+            <div className="absolute inset-0 bg-blue-400/20 rounded-full blur-lg animate-pulse" />
+            <LoadingSpinner size="lg" />
+          </div>
+          <p className="text-sm font-medium text-gray-600">アップロード中...</p>
+          <p className="text-xs text-gray-400">しばらくお待ちください</p>
         </div>
       ) : (
         <>
-          <svg
-            className="w-10 h-10 mx-auto text-gray-400 mb-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-            />
-          </svg>
-          <p className="text-sm text-gray-600 mb-2">
-            {UI_TEXT.uploadInstruction}
+          <div className={`w-14 h-14 mx-auto mb-4 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+            isDragging
+              ? "bg-blue-100 scale-110"
+              : "bg-gray-100 group-hover:bg-gray-200"
+          }`}>
+            <svg
+              className={`w-7 h-7 transition-colors ${isDragging ? "text-blue-600" : "text-gray-400"}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+              />
+            </svg>
+          </div>
+          <p className={`text-sm font-medium mb-1 transition-colors ${isDragging ? "text-blue-600" : "text-gray-700"}`}>
+            {isDragging ? "ここにドロップ" : UI_TEXT.uploadInstruction}
+          </p>
+          <p className="text-xs text-gray-400 mb-4">
+            または
           </p>
           <label className="inline-block">
             <span
-              className="px-4 py-2 text-sm font-medium text-blue-600
-                       bg-blue-50 rounded-lg cursor-pointer
-                       hover:bg-blue-100 transition-colors"
+              className="px-5 py-2.5 text-sm font-medium text-blue-600
+                       bg-blue-50 rounded-xl
+                       hover:bg-blue-100 hover:shadow-md
+                       active:scale-95 transition-all duration-200"
             >
               {UI_TEXT.uploadButton}
             </span>
@@ -102,8 +122,11 @@ export function DocumentUpload({ onUpload, isUploading }: DocumentUploadProps) {
               onChange={handleFileSelect}
             />
           </label>
-          <p className="mt-2 text-xs text-gray-500">
-            最大 {UPLOAD_CONFIG.maxFileSize / 1024 / 1024}MB
+          <p className="mt-4 text-xs text-gray-400 flex items-center justify-center gap-1.5">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            最大 {UPLOAD_CONFIG.maxFileSize / 1024 / 1024}MB・テキストファイル(.txt)のみ
           </p>
         </>
       )}
