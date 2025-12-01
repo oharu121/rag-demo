@@ -19,6 +19,7 @@ export function ChatInterface() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const documentButtonRef = useRef<HTMLButtonElement>(null);
 
   const totalDocuments = sampleDocuments.length + uploadedDocuments.length;
   const allDocuments = [...sampleDocuments, ...uploadedDocuments];
@@ -60,6 +61,7 @@ export function ChatInterface() {
               </p>
             </div>
             <button
+              ref={documentButtonRef}
               onClick={() => setIsDrawerOpen(true)}
               className={`group flex items-center gap-2.5 px-5 py-2.5 text-sm font-medium
                        text-gray-700 bg-white/80 rounded-xl border border-gray-200/60
@@ -293,6 +295,7 @@ export function ChatInterface() {
           <OnboardingTooltip
             documentCount={totalDocuments}
             onDismiss={() => setShowOnboarding(false)}
+            targetRef={documentButtonRef}
           />
         )}
       </div>
