@@ -69,6 +69,10 @@ export const UI_TEXT = {
   genericPrompt1: "この文書の要約を教えて",
   genericPrompt2: "主なポイントは何ですか？",
   genericPrompt3: "重要な情報をリストアップして",
+
+  // Document preview modal
+  documentLoading: "読み込み中...",
+  documentLoadError: "ドキュメントの読み込みに失敗しました",
 } as const;
 
 // API Configuration

@@ -5,6 +5,7 @@
 import { API_CONFIG } from "./constants";
 import type {
   Document,
+  DocumentContentResponse,
   DocumentListResponse,
   DocumentUploadResponse,
   HealthResponse,
@@ -79,6 +80,29 @@ export async function deleteDocument(docId: string): Promise<void> {
     const error = await response.json();
     throw new Error(error.detail || "Delete failed");
   }
+}
+
+/**
+ * ドキュメントの内容を取得
+ */
+export async function fetchDocumentContent(
+  docId: string
+): Promise<{ content: string; filename: string; lineCount: number }> {
+  const response = await fetch(
+    `${baseUrl}${endpoints.documents}/${docId}/content`
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Failed to fetch document content");
+  }
+
+  const data: DocumentContentResponse = await response.json();
+  return {
+    content: data.content,
+    filename: data.filename,
+    lineCount: data.line_count,
+  };
 }
 
 /**

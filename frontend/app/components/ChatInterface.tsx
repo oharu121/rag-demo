@@ -8,8 +8,10 @@ import { UI_TEXT } from "@/lib/constants";
 import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
 import { DocumentDrawer } from "./DocumentDrawer";
+import { DocumentPreviewModal } from "./DocumentPreviewModal";
 import { ServerStartingOverlay } from "./ServerStartingOverlay";
 import { OnboardingTooltip } from "./OnboardingTooltip";
+import type { Document } from "@/lib/types";
 
 export function ChatInterface() {
   const { messages, isLoading, error, sendMessage, clearError } = useChat();
@@ -18,6 +20,7 @@ export function ChatInterface() {
   const { sampleDocuments, uploadedDocuments } = documentsHook;
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const documentButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -186,7 +189,7 @@ export function ChatInterface() {
                       {allDocuments.slice(0, 5).map((doc, i) => (
                         <button
                           key={doc.id}
-                          onClick={() => setIsDrawerOpen(true)}
+                          onClick={() => setPreviewDoc(doc)}
                           className="group flex items-center gap-2 px-3 py-2 bg-white border border-gray-200
                                    rounded-xl hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-md
                                    transition-all duration-200 animate-fade-in-up"
@@ -298,6 +301,12 @@ export function ChatInterface() {
             targetRef={documentButtonRef}
           />
         )}
+
+        {/* Document preview modal */}
+        <DocumentPreviewModal
+          doc={previewDoc}
+          onClose={() => setPreviewDoc(null)}
+        />
       </div>
     </>
   );

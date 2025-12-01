@@ -64,6 +64,13 @@ export interface RebuildResponse {
   message: string;
 }
 
+export interface DocumentContentResponse {
+  id: string;
+  filename: string;
+  content: string;
+  line_count: number;
+}
+
 // SSE Event types
 export interface SSETokenEvent {
   type: "token";

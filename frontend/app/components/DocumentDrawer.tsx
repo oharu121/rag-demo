@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { UI_TEXT } from "@/lib/constants";
 import { useDocuments } from "@/hooks/useDocuments";
 import { DocumentList } from "./DocumentList";
+import { DocumentPreviewModal } from "./DocumentPreviewModal";
 import { DocumentUpload } from "./DocumentUpload";
 import { LoadingSpinner } from "./LoadingSpinner";
+import type { Document } from "@/lib/types";
 
 type DocumentsHookReturn = ReturnType<typeof useDocuments>;
 
@@ -30,6 +32,8 @@ export function DocumentDrawer({ isOpen, onClose, documentsHook }: DocumentDrawe
     rebuild,
     clearError,
   } = documentsHook || internalHook;
+
+  const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
 
   // Close on escape key
   useEffect(() => {
@@ -159,6 +163,7 @@ export function DocumentDrawer({ isOpen, onClose, documentsHook }: DocumentDrawe
               <DocumentList
                 title={UI_TEXT.sampleDocuments}
                 documents={sampleDocuments}
+                onPreview={setPreviewDoc}
               />
 
               {/* Uploaded documents */}
@@ -166,6 +171,7 @@ export function DocumentDrawer({ isOpen, onClose, documentsHook }: DocumentDrawe
                 title={UI_TEXT.uploadedDocuments}
                 documents={uploadedDocuments}
                 onDelete={remove}
+                onPreview={setPreviewDoc}
                 showDelete
               />
 
@@ -247,6 +253,12 @@ export function DocumentDrawer({ isOpen, onClose, documentsHook }: DocumentDrawe
           </p>
         </div>
       </div>
+
+      {/* Document preview modal */}
+      <DocumentPreviewModal
+        doc={previewDoc}
+        onClose={() => setPreviewDoc(null)}
+      />
     </>
   );
 }

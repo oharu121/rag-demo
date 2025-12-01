@@ -7,6 +7,7 @@ interface DocumentListProps {
   title: string;
   documents: Document[];
   onDelete?: (docId: string) => void;
+  onPreview?: (doc: Document) => void;
   showDelete?: boolean;
 }
 
@@ -14,6 +15,7 @@ export function DocumentList({
   title,
   documents,
   onDelete,
+  onPreview,
   showDelete = false,
 }: DocumentListProps) {
   if (documents.length === 0) {
@@ -46,7 +48,9 @@ export function DocumentList({
                      transition-all duration-200 animate-fade-in-up"
             style={{ animationDelay: `${index * 50}ms` }}
           >
-            <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={() => onPreview?.(doc)}
+              className="flex items-center gap-3 min-w-0 text-left flex-1">
               <div
                 className="w-10 h-10 rounded-xl bg-linear-to-br from-blue-50 to-indigo-100
                             flex items-center justify-center shrink-0
@@ -74,8 +78,8 @@ export function DocumentList({
                   {doc.lineCount} 行
                 </p>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
+            </button>
+            <div className="flex items-center gap-2 shrink-0">
               <span
                 className={`text-xs px-2.5 py-1 rounded-full font-medium transition-all ${
                   doc.status === "ready"
