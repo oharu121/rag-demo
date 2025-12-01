@@ -199,6 +199,38 @@ class DocumentService:
         uploads_exist = any(self.settings.uploads_dir.glob("**/*.txt"))
         return sample_exists or uploads_exist
 
+    def get_document_content(self, doc_id: str) -> tuple[DocumentInfo, str]:
+        """ドキュメントの内容を取得"""
+        # サンプルドキュメントを検索
+        for file_path in self.settings.documents_dir.glob("**/*.txt"):
+            content = file_path.read_text(encoding="utf-8")
+            if self._generate_id(file_path.name, content) == doc_id:
+                line_count = len(content.split("\n"))
+                doc_info = DocumentInfo(
+                    id=doc_id,
+                    filename=file_path.name,
+                    doc_type="sample",
+                    status="ready",
+                    line_count=line_count,
+                )
+                return doc_info, content
+
+        # アップロードされたドキュメントを検索
+        for file_path in self.settings.uploads_dir.glob("**/*.txt"):
+            content = file_path.read_text(encoding="utf-8")
+            if self._generate_id(file_path.name, content) == doc_id:
+                line_count = len(content.split("\n"))
+                doc_info = DocumentInfo(
+                    id=doc_id,
+                    filename=file_path.name,
+                    doc_type="uploaded",
+                    status="ready",
+                    line_count=line_count,
+                )
+                return doc_info, content
+
+        raise DocumentException(ErrorMessages.DOCUMENT_NOT_FOUND, "NOT_FOUND")
+
 
 # シングルトンインスタンス
 _document_service: DocumentService | None = None

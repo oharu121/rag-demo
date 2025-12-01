@@ -9,6 +9,7 @@ from app.models.schemas import (
     DocumentInfo,
     DocumentUploadResponse,
     DocumentDeleteResponse,
+    DocumentContentResponse,
     RebuildResponse,
     ErrorResponse,
 )
@@ -62,6 +63,23 @@ async def upload_document(file: UploadFile = File(...)) -> DocumentUploadRespons
         )
     except DocumentException as e:
         raise HTTPException(status_code=400, detail=e.message)
+
+
+@router.get("/{doc_id}/content", response_model=DocumentContentResponse)
+async def get_document_content(doc_id: str) -> DocumentContentResponse:
+    """ドキュメントの内容を取得"""
+    try:
+        doc_service = get_document_service()
+        doc_info, content = doc_service.get_document_content(doc_id)
+
+        return DocumentContentResponse(
+            id=doc_info.id,
+            filename=doc_info.filename,
+            content=content,
+            line_count=doc_info.line_count,
+        )
+    except DocumentException as e:
+        raise HTTPException(status_code=404, detail=e.message)
 
 
 @router.delete("/{doc_id}", response_model=DocumentDeleteResponse)

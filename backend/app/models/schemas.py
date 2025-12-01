@@ -74,6 +74,15 @@ class DocumentDeleteResponse(BaseModel):
     message: str
 
 
+class DocumentContentResponse(BaseModel):
+    """ドキュメント内容レスポンス"""
+
+    id: str
+    filename: str
+    content: str
+    line_count: int
+
+
 class RebuildResponse(BaseModel):
     """再構築レスポンス"""
 
