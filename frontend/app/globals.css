@@ -117,6 +117,12 @@ input:disabled {
   outline-offset: 2px;
 }
 
+/* Disable focus ring on elements that have custom focus handling via parent */
+textarea:focus-visible,
+input[type="text"]:focus-visible {
+  outline: none;
+}
+
 /* Smooth page transitions */
 html {
   scroll-behavior: smooth;

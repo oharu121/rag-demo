@@ -13,6 +13,13 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Auto-focus on mount
+  useEffect(() => {
+    if (!disabled && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [disabled]);
+
   // Auto-resize textarea
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -64,7 +71,7 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
               disabled={disabled}
               rows={1}
               className="w-full resize-none bg-transparent px-3 py-2.5 text-base
-                       focus:outline-none disabled:text-gray-400
+                       disabled:text-gray-400
                        placeholder:text-gray-400"
               style={{ minHeight: "44px", maxHeight: "150px" }}
             />
@@ -75,31 +82,31 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
             className={`shrink-0 h-11 w-11 rounded-xl flex items-center justify-center
                      transition-all duration-200 ${
                        canSend
-                         ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/30 hover:shadow-lg hover:shadow-blue-500/40 hover:scale-105 active:scale-95"
+                         ? "bg-linear-to-r from-blue-500 to-blue-600 text-white shadow-md shadow-blue-500/30 hover:shadow-lg hover:shadow-blue-500/40 hover:scale-105 active:scale-95"
                          : "bg-gray-100 text-gray-400"
                      }`}
             aria-label="送信"
           >
             <svg
-              className={`w-5 h-5 transition-transform duration-200 ${canSend ? "translate-x-0.5" : ""}`}
-              fill="none"
-              stroke="currentColor"
+              className={`w-5 h-5 transition-transform duration-200 ${
+                canSend ? "translate-x-0.5" : ""
+              }`}
+              fill="currentColor"
               viewBox="0 0 24 24"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-              />
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
             </svg>
           </button>
         </div>
         <p className="mt-2.5 text-xs text-gray-400 text-center flex items-center justify-center gap-2">
-          <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-500 font-mono text-[10px]">Enter</kbd>
+          <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-500 font-mono text-[10px]">
+            Enter
+          </kbd>
           <span>で送信</span>
           <span className="text-gray-300">•</span>
-          <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-500 font-mono text-[10px]">Shift + Enter</kbd>
+          <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-500 font-mono text-[10px]">
+            Shift + Enter
+          </kbd>
           <span>で改行</span>
         </p>
       </div>
