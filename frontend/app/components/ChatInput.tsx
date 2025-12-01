@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, KeyboardEvent } from "react";
-import { UI_TEXT } from "../../lib/constants";
+import { UI_TEXT } from "@/lib/constants";
 
 interface ChatInputProps {
   onSend: (message: string) => void;

@@ -1,6 +1,6 @@
 "use client";
 
-import type { Message } from "../../lib/types";
+import type { Message } from "@/lib/types";
 import { SourceCitation } from "./SourceCitation";
 import { LoadingSpinner } from "./LoadingSpinner";
 

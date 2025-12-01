@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { UI_TEXT, UPLOAD_CONFIG } from "../../lib/constants";
+import { UI_TEXT, UPLOAD_CONFIG } from "@/lib/constants";
 import { LoadingSpinner } from "./LoadingSpinner";
 
 interface DocumentUploadProps {

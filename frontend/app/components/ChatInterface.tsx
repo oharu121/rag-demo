@@ -1,9 +1,9 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { useChat } from "../../hooks/useChat";
-import { useServerStatus } from "../../hooks/useServerStatus";
-import { UI_TEXT } from "../../lib/constants";
+import { useChat } from "@/hooks/useChat";
+import { useServerStatus } from "@/hooks/useServerStatus";
+import { UI_TEXT } from "@/lib/constants";
 import { MessageBubble } from "./MessageBubble";
 import { ChatInput } from "./ChatInput";
 import { DocumentDrawer } from "./DocumentDrawer";

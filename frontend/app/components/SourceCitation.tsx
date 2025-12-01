@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import type { Source } from "../../lib/types";
-import { UI_TEXT } from "../../lib/constants";
+import type { Source } from "@/lib/types";
+import { UI_TEXT } from "@/lib/constants";
 
 interface SourceCitationProps {
   source: Source;

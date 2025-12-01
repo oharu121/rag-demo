@@ -1,7 +1,7 @@
 "use client";
 
-import type { Document } from "../../lib/types";
-import { UI_TEXT } from "../../lib/constants";
+import type { Document } from "@/lib/types";
+import { UI_TEXT } from "@/lib/constants";
 
 interface DocumentListProps {
   title: string;

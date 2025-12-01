@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { checkHealth } from "../lib/api";
-import type { HealthResponse } from "../lib/types";
+import { checkHealth } from "@/lib/api";
+import type { HealthResponse } from "@/lib/types";
 
 export type ServerStatus = "checking" | "starting" | "ready" | "error";
 
