@@ -30,6 +30,14 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"初期化エラー: {e}", flush=True)
 
+    # 登録されたルートを出力
+    print("=" * 50, flush=True)
+    print("登録されたルート:", flush=True)
+    for route in app.routes:
+        if hasattr(route, "methods") and hasattr(route, "path"):
+            print(f"  {route.methods} {route.path}", flush=True)
+    print("=" * 50, flush=True)
+
     yield
 
     print("RAG Backend API を終了中...", flush=True)

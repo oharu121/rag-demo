@@ -20,6 +20,37 @@ from app.utils.errors import DocumentException, RAGException, ErrorMessages
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
+@router.get("/debug/routes")
+async def debug_routes():
+    """デバッグ用: ルート確認"""
+    return {
+        "message": "Documents router is working",
+        "available_routes": [
+            "GET /api/documents",
+            "GET /api/documents/debug/routes",
+            "GET /api/documents/debug/test-content/{doc_id}",
+            "GET /api/documents/{doc_id}/content",
+            "POST /api/documents/upload",
+            "DELETE /api/documents/{doc_id}",
+            "POST /api/documents/rebuild",
+        ]
+    }
+
+
+@router.get("/debug/test-content/{doc_id}")
+async def debug_test_content(doc_id: str):
+    """デバッグ用: コンテンツエンドポイントのテスト"""
+    print(f"[DEBUG] debug_test_content called with doc_id: {doc_id}", flush=True)
+    doc_service = get_document_service()
+    all_docs = doc_service.list_documents()
+    doc_ids = [d.id for d in all_docs]
+    return {
+        "received_doc_id": doc_id,
+        "available_doc_ids": doc_ids,
+        "doc_id_found": doc_id in doc_ids,
+    }
+
+
 @router.get("", response_model=DocumentListResponse)
 async def list_documents() -> DocumentListResponse:
     """全てのドキュメント一覧を取得"""
@@ -68,9 +99,12 @@ async def upload_document(file: UploadFile = File(...)) -> DocumentUploadRespons
 @router.get("/{doc_id}/content", response_model=DocumentContentResponse)
 async def get_document_content(doc_id: str) -> DocumentContentResponse:
     """ドキュメントの内容を取得"""
+    print(f"[DEBUG] get_document_content called with doc_id: {doc_id}", flush=True)
     try:
         doc_service = get_document_service()
+        print(f"[DEBUG] Searching for document: {doc_id}", flush=True)
         doc_info, content = doc_service.get_document_content(doc_id)
+        print(f"[DEBUG] Found document: {doc_info.filename}", flush=True)
 
         return DocumentContentResponse(
             id=doc_info.id,
@@ -79,7 +113,11 @@ async def get_document_content(doc_id: str) -> DocumentContentResponse:
             line_count=doc_info.line_count,
         )
     except DocumentException as e:
+        print(f"[DEBUG] DocumentException: {e.message}", flush=True)
         raise HTTPException(status_code=404, detail=e.message)
+    except Exception as e:
+        print(f"[DEBUG] Unexpected error: {e}", flush=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.delete("/{doc_id}", response_model=DocumentDeleteResponse)
