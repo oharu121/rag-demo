@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { UI_TEXT } from "@/lib/constants";
 import { useDocuments } from "@/hooks/useDocuments";
 import { DocumentList } from "./DocumentList";
@@ -15,9 +15,10 @@ interface DocumentDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   documentsHook?: DocumentsHookReturn;
+  onRebuildButtonRef?: (ref: HTMLButtonElement | null) => void;
 }
 
-export function DocumentDrawer({ isOpen, onClose, documentsHook }: DocumentDrawerProps) {
+export function DocumentDrawer({ isOpen, onClose, documentsHook, onRebuildButtonRef }: DocumentDrawerProps) {
   // Use provided hook or create our own
   const internalHook = useDocuments();
   const {
@@ -34,6 +35,19 @@ export function DocumentDrawer({ isOpen, onClose, documentsHook }: DocumentDrawe
   } = documentsHook || internalHook;
 
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
+  const rebuildButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Notify parent of rebuild button ref when drawer opens
+  useEffect(() => {
+    if (isOpen && onRebuildButtonRef) {
+      onRebuildButtonRef(rebuildButtonRef.current);
+    }
+    return () => {
+      if (onRebuildButtonRef) {
+        onRebuildButtonRef(null);
+      }
+    };
+  }, [isOpen, onRebuildButtonRef]);
 
   // Close on escape key
   useEffect(() => {
@@ -149,6 +163,23 @@ export function DocumentDrawer({ isOpen, onClose, documentsHook }: DocumentDrawe
           {/* Upload section */}
           <div className="mb-6">
             <DocumentUpload onUpload={upload} isUploading={isUploading} />
+            {/* Shared visibility warning */}
+            <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mt-3">
+              <svg
+                className="w-4 h-4 shrink-0 mt-0.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+              <span>アップロードしたファイルは他のユーザーにも表示されます。使用後は削除してください。</span>
+            </div>
           </div>
 
           {/* Loading state */}
@@ -209,6 +240,7 @@ export function DocumentDrawer({ isOpen, onClose, documentsHook }: DocumentDrawe
         {/* Footer with rebuild button */}
         <div className="shrink-0 px-6 py-5 border-t border-gray-100 bg-gray-50/50">
           <button
+            ref={rebuildButtonRef}
             onClick={rebuild}
             disabled={
               isRebuilding ||

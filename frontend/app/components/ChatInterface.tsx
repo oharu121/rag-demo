@@ -13,7 +13,9 @@ import { DocumentChipsBar } from "./DocumentChipsBar";
 import { ServerStartingOverlay } from "./ServerStartingOverlay";
 import { OnboardingTooltip } from "./OnboardingTooltip";
 import { PreviewHintCallout } from "./PreviewHintCallout";
+import { UploadGuideCallout } from "./UploadGuideCallout";
 import type { Document } from "@/lib/types";
+import type { ChatInputRef } from "./ChatInput";
 
 export function ChatInterface() {
   const { messages, isLoading, error, sendMessage, clearError } = useChat();
@@ -23,10 +25,13 @@ export function ChatInterface() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [showPreviewHint, setShowPreviewHint] = useState(false);
+  const [showUploadGuide, setShowUploadGuide] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
+  const [rebuildButtonRef, setRebuildButtonRef] = useState<HTMLButtonElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const documentButtonRef = useRef<HTMLButtonElement>(null);
   const documentChipsRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<ChatInputRef>(null);
 
   const totalDocuments = sampleDocuments.length + uploadedDocuments.length;
   const allDocuments = [...sampleDocuments, ...uploadedDocuments];
@@ -260,13 +265,14 @@ export function ChatInterface() {
         </main>
 
         {/* Input area */}
-        <ChatInput onSend={sendMessage} disabled={isLoading || !isReady} />
+        <ChatInput ref={chatInputRef} onSend={sendMessage} disabled={isLoading || !isReady} />
 
         {/* Document drawer */}
         <DocumentDrawer
           isOpen={isDrawerOpen}
           onClose={() => setIsDrawerOpen(false)}
           documentsHook={documentsHook}
+          onRebuildButtonRef={setRebuildButtonRef}
         />
 
         {/* Onboarding tooltip - only show when server is ready and not starting */}
@@ -287,8 +293,28 @@ export function ChatInterface() {
         {/* Preview hint callout - show after onboarding is dismissed */}
         {showPreviewHint && totalDocuments > 0 && (
           <PreviewHintCallout
-            onDismiss={() => setShowPreviewHint(false)}
+            onDismiss={() => {
+              setShowPreviewHint(false);
+              // Show upload guide after preview hint
+              setTimeout(() => {
+                setShowUploadGuide(true);
+                setIsDrawerOpen(true);
+              }, 300);
+            }}
             targetRef={documentChipsRef}
+          />
+        )}
+
+        {/* Upload guide callout - show after preview hint, opens drawer */}
+        {showUploadGuide && isDrawerOpen && (
+          <UploadGuideCallout
+            onDismiss={() => {
+              setShowUploadGuide(false);
+              setIsDrawerOpen(false);
+              // Focus chat input after tutorial completes
+              setTimeout(() => chatInputRef.current?.focus(), 100);
+            }}
+            targetRef={rebuildButtonRef}
           />
         )}
 

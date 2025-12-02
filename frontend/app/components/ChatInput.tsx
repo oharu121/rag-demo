@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, KeyboardEvent } from "react";
+import { useState, useRef, useEffect, KeyboardEvent, forwardRef, useImperativeHandle } from "react";
 import { UI_TEXT } from "@/lib/constants";
 
 interface ChatInputProps {
@@ -8,10 +8,19 @@ interface ChatInputProps {
   disabled?: boolean;
 }
 
-export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
+export interface ChatInputRef {
+  focus: () => void;
+}
+
+export const ChatInput = forwardRef<ChatInputRef, ChatInputProps>(function ChatInput({ onSend, disabled = false }, ref) {
   const [input, setInput] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Expose focus method to parent
+  useImperativeHandle(ref, () => ({
+    focus: () => textareaRef.current?.focus(),
+  }));
 
   // Auto-focus on mount
   useEffect(() => {
@@ -112,4 +121,4 @@ export function ChatInput({ onSend, disabled = false }: ChatInputProps) {
       </div>
     </div>
   );
-}
+});

@@ -66,6 +66,10 @@ export const UI_TEXT = {
   previewHintTitle: "ドキュメントをプレビュー",
   previewHintMessage: "クリックするとドキュメントの内容を確認できます。",
 
+  // Upload guide callout
+  uploadGuideTitle: "ドキュメントをアップロード",
+  uploadGuideMessage: "ファイルをアップロード後、「インデックスを再構築」ボタンを押すと検索対象に追加されます。",
+
   // Welcome screen
   welcomeWithDocs: "以下のドキュメントについて質問できます",
 
