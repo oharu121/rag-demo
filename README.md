@@ -1,48 +1,66 @@
 # RAG ドキュメント検索デモ
 
-RAG（Retrieval-Augmented Generation）を活用したドキュメント検索システムのデモアプリケーションです。
+RAG（Retrieval-Augmented Generation）を活用したドキュメント検索システムのデモアプリケーションです。社内ドキュメントに対して自然言語で質問でき、根拠のある回答を得ることができます。
+
+## デモ
+
+**Live Demo**: [https://rag-demo.vercel.app](https://rag-demo.vercel.app)
 
 ## 技術スタック
 
-| コンポーネント | 技術 | 説明 |
-|--------------|------|------|
-| フロントエンド | Next.js 16 / React 19 | Vercelにデプロイ |
-| バックエンド | FastAPI / Python 3.12 | Hugging Face Spacesにデプロイ |
-| 埋め込みモデル | intfloat/multilingual-e5-large | 日本語に最適化 |
-| ベクトルDB | Chroma | ローカル永続化 |
-| LLM | Google Gemini 2.0 Flash | 無料枠で利用可能 |
+| レイヤー | 技術 | 選定理由 |
+|---------|------|----------|
+| フロントエンド | Next.js 16 / React 19 | App Router + RSC対応 |
+| バックエンド | FastAPI / Python 3.12 | 非同期処理・型安全 |
+| 埋め込みモデル | intfloat/multilingual-e5-large | 日本語精度が高い |
+| ベクトルDB | Chroma | 学習コスト低・OSS |
+| LLM | Google Gemini 2.0 Flash | 無料枠あり |
+| デプロイ | Vercel + HF Spaces | 無料で本番運用可能 |
 
 ## 機能
 
-- ストリーミングレスポンス（ChatGPTのようなリアルタイム表示）
-- マルチターン会話（セッション内で会話履歴を保持）
-- ドキュメントアップロード（テキストファイル対応）
-- 出典表示（ファイル名・行番号付き）
-- レート制限（Gemini無料枠に対応）
-- モバイルレスポンシブデザイン
+- **ストリーミングレスポンス** - ChatGPTのようなリアルタイム表示
+- **マルチターン会話** - セッション内で会話履歴を保持
+- **ドキュメント管理** - アップロード・プレビュー・削除
+- **出典表示** - ファイル名・行番号付きで回答の根拠を明示
+- **オンボーディング** - 初回訪問者向けのガイドツールチップ
+- **レート制限** - Gemini無料枠に対応
+- **モバイルレスポンシブ** - スマートフォンでも快適に利用可能
+
+## アーキテクチャ
+
+```
+[Vercel]              [HF Spaces]           [Chroma]
+Next.js 16     <--->   FastAPI      <--->   Vector DB
+フロントエンド          バックエンド            永続化
+     ↑                     ↑
+     └─────── SSE ─────────┘
+          (ストリーミング)
+```
 
 ## プロジェクト構成
 
 ```
 simple-rag-app/
-├── frontend/          # Next.js フロントエンド
+├── frontend/              # Next.js フロントエンド
 │   ├── app/
-│   │   ├── components/
+│   │   ├── components/    # UIコンポーネント
 │   │   ├── page.tsx
 │   │   └── layout.tsx
-│   ├── lib/
-│   ├── hooks/
+│   ├── lib/               # API・定数・型定義
+│   ├── hooks/             # カスタムフック
 │   └── package.json
 │
-├── backend/           # Python バックエンド
+├── backend/               # Python バックエンド
 │   ├── app/
-│   │   ├── routers/
-│   │   ├── services/
-│   │   ├── models/
-│   │   └── utils/
+│   │   ├── routers/       # APIエンドポイント
+│   │   ├── services/      # ビジネスロジック
+│   │   ├── models/        # データモデル
+│   │   └── utils/         # ユーティリティ
 │   ├── pyproject.toml
 │   └── Dockerfile
 │
+├── dev-notes/             # 開発メモ
 └── README.md
 ```
 
@@ -164,6 +182,7 @@ git push --force space main
 | GET | /api/health | ヘルスチェック |
 | POST | /api/chat | チャット（ストリーミング） |
 | GET | /api/documents | ドキュメント一覧 |
+| GET | /api/documents/{id}/content | ドキュメント内容取得 |
 | POST | /api/documents/upload | ドキュメントアップロード |
 | DELETE | /api/documents/{id} | ドキュメント削除 |
 | POST | /api/documents/rebuild | インデックス再構築 |
@@ -183,6 +202,17 @@ uv run pytest
 cd frontend
 npm run build
 ```
+
+## 学んだこと
+
+このプロジェクトを通じて学んだ主なポイント:
+
+1. **チャンキング** - `chunk_overlap`は`chunk_size`の10-20%が推奨。文脈の断絶を防ぐ
+2. **Embedding** - 意味的類似性を捉えるベクトル表現の重要性
+3. **SSEストリーミング** - ChatGPTのようなUXを実現するServer-Sent Events
+4. **Reactのステール・クロージャ** - 非同期処理では`useRef`か関数型`setState`を活用
+
+詳細は [dev-notes/](./dev-notes/) を参照してください。
 
 ## ライセンス
 

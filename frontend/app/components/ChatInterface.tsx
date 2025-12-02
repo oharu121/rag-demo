@@ -50,6 +50,19 @@ export function ChatInterface() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Preload avatar GIFs
+  useEffect(() => {
+    const preloadImages = [
+      "/avatars/maya-idling.gif",
+      "/avatars/maya-speaking.gif",
+      "/avatars/maya-thinking.gif",
+    ];
+    preloadImages.forEach((src) => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, []);
+
   return (
     <>
       {/* Server starting overlay */}
