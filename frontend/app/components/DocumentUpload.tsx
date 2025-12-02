@@ -28,7 +28,7 @@ export function DocumentUpload({ onUpload, isUploading }: DocumentUploadProps) {
       setIsDragging(false);
 
       const files = Array.from(e.dataTransfer.files);
-      const txtFiles = files.filter((f) => f.name.endsWith(".txt"));
+      const txtFiles = files.filter((f) => f.name.endsWith(".txt") || f.name.endsWith(".md"));
 
       for (const file of txtFiles) {
         await onUpload(file);
@@ -116,7 +116,7 @@ export function DocumentUpload({ onUpload, isUploading }: DocumentUploadProps) {
             </span>
             <input
               type="file"
-              accept=".txt"
+              accept=".txt,.md"
               multiple
               className="hidden"
               onChange={handleFileSelect}
@@ -126,7 +126,7 @@ export function DocumentUpload({ onUpload, isUploading }: DocumentUploadProps) {
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            最大 {UPLOAD_CONFIG.maxFileSize / 1024 / 1024}MB・テキストファイル(.txt)のみ
+            最大 {UPLOAD_CONFIG.maxFileSize / 1024 / 1024}MB・.txt / .md ファイル
           </p>
         </>
       )}

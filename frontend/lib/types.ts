@@ -46,8 +46,17 @@ export interface HealthResponse {
   document_count: number;
 }
 
+// Raw API document format (snake_case from backend)
+export interface APIDocumentInfo {
+  id: string;
+  filename: string;
+  type: "sample" | "uploaded";
+  status: "ready" | "processing" | "error";
+  line_count: number;
+}
+
 export interface DocumentListResponse {
-  documents: Document[];
+  documents: APIDocumentInfo[];
   total: number;
 }
 

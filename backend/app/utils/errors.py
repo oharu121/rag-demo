@@ -19,7 +19,7 @@ class ErrorMessages:
     DOCUMENT_NOT_FOUND = "ドキュメントが見つかりません。"
     DOCUMENT_UPLOAD_FAILED = "ドキュメントのアップロードに失敗しました。"
     DOCUMENT_DELETE_FAILED = "ドキュメントの削除に失敗しました。"
-    INVALID_FILE_TYPE = "無効なファイル形式です。テキストファイル(.txt)のみ対応しています。"
+    INVALID_FILE_TYPE = "無効なファイル形式です。テキストファイル(.txt)またはマークダウン(.md)のみ対応しています。"
     FILE_TOO_LARGE = "ファイルサイズが大きすぎます。1MB以下のファイルをアップロードしてください。"
     NO_DOCUMENTS = "ドキュメントがありません。ドキュメントをアップロードしてください。"
 

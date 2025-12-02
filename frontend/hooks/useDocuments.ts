@@ -32,7 +32,7 @@ export function useDocuments() {
 
   const upload = useCallback(async (file: File) => {
     // Validate file
-    if (!file.name.endsWith(".txt")) {
+    if (!file.name.endsWith(".txt") && !file.name.endsWith(".md")) {
       setError(UI_TEXT.invalidFileType);
       return false;
     }

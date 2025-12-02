@@ -27,14 +27,14 @@ export const UI_TEXT = {
   rateLimitError: "リクエスト制限に達しました。しばらくお待ちください。",
   serverError: "サーバーエラーが発生しました。",
   uploadError: "ファイルのアップロードに失敗しました。",
-  invalidFileType: "テキストファイル(.txt)のみ対応しています。",
+  invalidFileType: "テキストファイル(.txt)またはマークダウン(.md)のみ対応しています。",
   fileTooLarge: "ファイルサイズは1MB以下にしてください。",
 
   // Documents
   documentsTitle: "ドキュメント",
   sampleDocuments: "サンプル文書",
   uploadedDocuments: "アップロード済み",
-  uploadInstruction: "テキストファイル(.txt)をドラッグ＆ドロップ",
+  uploadInstruction: ".txt または .md ファイルをドラッグ＆ドロップ",
   uploadButton: "ファイルを選択",
   deleteConfirm: "この文書を削除しますか？",
   rebuildButton: "インデックスを再構築",
@@ -94,6 +94,6 @@ export const API_CONFIG = {
 // File upload constraints
 export const UPLOAD_CONFIG = {
   maxFileSize: 1024 * 1024, // 1MB
-  allowedTypes: [".txt"],
-  allowedMimeTypes: ["text/plain"],
+  allowedTypes: [".txt", ".md"],
+  allowedMimeTypes: ["text/plain", "text/markdown"],
 } as const;

@@ -42,7 +42,7 @@ export async function fetchDocuments(): Promise<Document[]> {
     filename: doc.filename,
     type: doc.type,
     status: doc.status,
-    lineCount: doc.lineCount || 0,
+    lineCount: doc.line_count || 0,
   }));
 }
 

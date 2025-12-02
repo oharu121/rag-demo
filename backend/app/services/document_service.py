@@ -55,6 +55,11 @@ class DocumentService:
         self.settings.documents_dir.mkdir(parents=True, exist_ok=True)
         self.settings.uploads_dir.mkdir(parents=True, exist_ok=True)
 
+    def _iter_documents(self, directory: Path):
+        """指定ディレクトリ内の.txtと.mdファイルをイテレート"""
+        yield from directory.glob("**/*.txt")
+        yield from directory.glob("**/*.md")
+
     def _generate_id(self, filename: str, content: str) -> str:
         """ファイル名とコンテンツからIDを生成"""
         hash_input = f"{filename}:{content[:100]}"
@@ -83,16 +88,19 @@ class DocumentService:
 
     def _load_from_directory(self, directory: Path) -> list[Document]:
         """指定ディレクトリからドキュメントを読み込む"""
-        if not directory.exists() or not any(directory.glob("**/*.txt")):
+        if not directory.exists() or not any(self._iter_documents(directory)):
             return []
 
-        loader = DirectoryLoader(
-            str(directory),
-            glob="**/*.txt",
-            loader_cls=LineTrackingTextLoader,  # type: ignore[arg-type]
-            loader_kwargs={"encoding": "utf-8"},
-        )
-        return loader.load()
+        documents: list[Document] = []
+        for pattern in ["**/*.txt", "**/*.md"]:
+            loader = DirectoryLoader(
+                str(directory),
+                glob=pattern,
+                loader_cls=LineTrackingTextLoader,  # type: ignore[arg-type]
+                loader_kwargs={"encoding": "utf-8"},
+            )
+            documents.extend(loader.load())
+        return documents
 
     def split_documents(self, documents: list[Document]) -> list[Document]:
         """ドキュメントをチャンクに分割"""
@@ -118,7 +126,7 @@ class DocumentService:
         documents: list[DocumentInfo] = []
 
         # サンプルドキュメント
-        for file_path in self.settings.documents_dir.glob("**/*.txt"):
+        for file_path in self._iter_documents(self.settings.documents_dir):
             content = file_path.read_text(encoding="utf-8")
             line_count = len(content.split("\n"))
             doc_id = self._generate_id(file_path.name, content)
@@ -133,7 +141,7 @@ class DocumentService:
             )
 
         # アップロードされたドキュメント
-        for file_path in self.settings.uploads_dir.glob("**/*.txt"):
+        for file_path in self._iter_documents(self.settings.uploads_dir):
             content = file_path.read_text(encoding="utf-8")
             line_count = len(content.split("\n"))
             doc_id = self._generate_id(file_path.name, content)
@@ -152,7 +160,7 @@ class DocumentService:
     async def upload_document(self, filename: str, content: bytes) -> DocumentInfo:
         """ドキュメントをアップロード"""
         # バリデーション
-        if not filename.endswith(".txt"):
+        if not filename.endswith(".txt") and not filename.endswith(".md"):
             raise DocumentException(ErrorMessages.INVALID_FILE_TYPE, "INVALID_FILE_TYPE")
 
         if len(content) > 1024 * 1024:  # 1MB
@@ -185,7 +193,7 @@ class DocumentService:
     def delete_document(self, doc_id: str) -> bool:
         """アップロードされたドキュメントを削除"""
         # アップロードフォルダ内のみ削除可能
-        for file_path in self.settings.uploads_dir.glob("**/*.txt"):
+        for file_path in self._iter_documents(self.settings.uploads_dir):
             content = file_path.read_text(encoding="utf-8")
             if self._generate_id(file_path.name, content) == doc_id:
                 file_path.unlink()
@@ -195,14 +203,14 @@ class DocumentService:
 
     def has_documents(self) -> bool:
         """ドキュメントが存在するかチェック"""
-        sample_exists = any(self.settings.documents_dir.glob("**/*.txt"))
-        uploads_exist = any(self.settings.uploads_dir.glob("**/*.txt"))
+        sample_exists = any(self._iter_documents(self.settings.documents_dir))
+        uploads_exist = any(self._iter_documents(self.settings.uploads_dir))
         return sample_exists or uploads_exist
 
     def get_document_content(self, doc_id: str) -> tuple[DocumentInfo, str]:
         """ドキュメントの内容を取得"""
         # サンプルドキュメントを検索
-        for file_path in self.settings.documents_dir.glob("**/*.txt"):
+        for file_path in self._iter_documents(self.settings.documents_dir):
             content = file_path.read_text(encoding="utf-8")
             if self._generate_id(file_path.name, content) == doc_id:
                 line_count = len(content.split("\n"))
@@ -216,7 +224,7 @@ class DocumentService:
                 return doc_info, content
 
         # アップロードされたドキュメントを検索
-        for file_path in self.settings.uploads_dir.glob("**/*.txt"):
+        for file_path in self._iter_documents(self.settings.uploads_dir):
             content = file_path.read_text(encoding="utf-8")
             if self._generate_id(file_path.name, content) == doc_id:
                 line_count = len(content.split("\n"))
