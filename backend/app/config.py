@@ -33,7 +33,8 @@ class Settings(BaseSettings):
     retriever_k: int = 3
 
     # Rate Limiting
-    requests_per_minute: int = 15  # Gemini free tier limit
+    requests_per_minute: int = 15  # Per-IP limit
+    global_requests_per_minute: int = 10  # Global limit for Gemini free tier
 
     # CORS
     frontend_url: str = ""

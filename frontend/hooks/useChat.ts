@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef } from "react";
 import type { Message, Source, SSEEvent } from "@/lib/types";
 import { streamChat, parseSourcesFromAPI } from "@/lib/api";
-import { UI_TEXT } from "@/lib/constants";
+import { UI_TEXT, ERROR_CODE_MESSAGES } from "@/lib/constants";
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 15);
@@ -92,20 +92,26 @@ export function useChat() {
             );
             break;
 
-          case "error":
-            setError(event.data.message);
+          case "error": {
+            // Use error code mapping if available, fallback to server message
+            const errorCode = event.data.code;
+            const errorMessage = errorCode && ERROR_CODE_MESSAGES[errorCode]
+              ? ERROR_CODE_MESSAGES[errorCode]
+              : event.data.message;
+            setError(errorMessage);
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantMessage.id
                   ? {
                       ...m,
-                      content: event.data.message,
+                      content: errorMessage,
                       isStreaming: false,
                     }
                   : m
               )
             );
             break;
+          }
         }
       }
     } catch (err) {

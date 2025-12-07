@@ -29,6 +29,8 @@ export const UI_TEXT = {
   uploadError: "ファイルのアップロードに失敗しました。",
   invalidFileType: "テキストファイル(.txt)またはマークダウン(.md)のみ対応しています。",
   fileTooLarge: "ファイルサイズは1MB以下にしてください。",
+  quotaExhausted: "APIの利用枠を超えました。しばらくしてから再度お試しください。",
+  geminiRateLimited: "リクエストが多すぎます。少々お待ちください。",
 
   // Documents
   documentsTitle: "ドキュメント",
@@ -100,4 +102,15 @@ export const UPLOAD_CONFIG = {
   maxFileSize: 1024 * 1024, // 1MB
   allowedTypes: [".txt", ".md"],
   allowedMimeTypes: ["text/plain", "text/markdown"],
+} as const;
+
+// Error code to message mapping
+export const ERROR_CODE_MESSAGES: Record<string, string> = {
+  RATE_LIMITED: UI_TEXT.geminiRateLimited,
+  QUOTA_EXHAUSTED: UI_TEXT.quotaExhausted,
+  RATE_LIMIT_EXCEEDED: UI_TEXT.rateLimitError,
+  GLOBAL_RATE_LIMIT_EXCEEDED: UI_TEXT.rateLimitError,
+  GEMINI_ERROR: UI_TEXT.serverError,
+  LLM_ERROR: UI_TEXT.serverError,
+  INTERNAL_ERROR: UI_TEXT.serverError,
 } as const;

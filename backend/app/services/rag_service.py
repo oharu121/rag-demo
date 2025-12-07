@@ -4,10 +4,12 @@ RAGサービス - ストリーミング対応
 
 import asyncio
 import json
+import re
 import time
 from pathlib import Path
 from typing import AsyncGenerator
 
+from google.api_core.exceptions import ResourceExhausted
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
@@ -19,7 +21,47 @@ from app.config import get_settings
 from app.services.document_service import get_document_service
 from app.services.vectorstore_service import get_vectorstore_service
 from app.services.embedding_service import get_embedding_service
-from app.utils.errors import RAGException, ErrorMessages
+from app.utils.errors import RAGException, ErrorMessages, GeminiAPIException
+
+
+def classify_gemini_error(error: Exception) -> GeminiAPIException:
+    """
+    Gemini APIエラーをリトライ可能/不可能に分類する
+
+    Args:
+        error: 発生した例外
+
+    Returns:
+        GeminiAPIException: 分類された例外
+    """
+    error_str = str(error)
+
+    if isinstance(error, ResourceExhausted):
+        # limit: 0 の場合はクォータ枯渇（リトライ不可）
+        if "limit: 0" in error_str:
+            return GeminiAPIException(
+                ErrorMessages.GEMINI_QUOTA_EXHAUSTED,
+                "QUOTA_EXHAUSTED",
+                is_retryable=False,
+            )
+
+        # retry in Xs の形式からリトライ待機時間を抽出
+        retry_match = re.search(r"retry in (\d+\.?\d*)s", error_str, re.IGNORECASE)
+        retry_after = float(retry_match.group(1)) if retry_match else None
+
+        return GeminiAPIException(
+            ErrorMessages.GEMINI_RATE_LIMITED,
+            "RATE_LIMITED",
+            is_retryable=True,
+            retry_after=retry_after,
+        )
+
+    # その他のGeminiエラー
+    return GeminiAPIException(
+        ErrorMessages.GEMINI_API_ERROR,
+        "GEMINI_ERROR",
+        is_retryable=False,
+    )
 
 
 class StreamingCallbackHandler(BaseCallbackHandler):
@@ -197,19 +239,55 @@ class RAGService:
         # チェーンを構築
         chain = prompt | llm | StrOutputParser()
 
-        # 非同期でチェーンを実行
+        # 非同期でチェーンを実行（リトライロジック付き）
         async def run_chain():
-            try:
-                await asyncio.to_thread(
-                    chain.invoke,
-                    {
-                        "context": context,
-                        "question": question,
-                        "history_section": history_section,
-                    },
-                )
-            finally:
-                await queue.put(None)  # 終了シグナル
+            max_retries = 2
+            base_delay = 2.0
+
+            for attempt in range(max_retries + 1):
+                try:
+                    await asyncio.to_thread(
+                        chain.invoke,
+                        {
+                            "context": context,
+                            "question": question,
+                            "history_section": history_section,
+                        },
+                    )
+                    # 成功した場合は終了
+                    break
+                except ResourceExhausted as e:
+                    gemini_error = classify_gemini_error(e)
+
+                    if not gemini_error.is_retryable or attempt == max_retries:
+                        # リトライ不可またはリトライ回数超過
+                        await queue.put({
+                            "type": "error",
+                            "data": {
+                                "message": gemini_error.message,
+                                "code": gemini_error.code,
+                            },
+                        })
+                        break
+
+                    # リトライ可能 - 待機してリトライ
+                    delay = gemini_error.retry_after or (base_delay * (2 ** attempt))
+                    print(f"Gemini API rate limited. Retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})", flush=True)
+                    await asyncio.sleep(delay)
+                except Exception as e:
+                    # その他のエラー - リトライしない
+                    print(f"LLM error: {e}", flush=True)
+                    await queue.put({
+                        "type": "error",
+                        "data": {
+                            "message": ErrorMessages.LLM_ERROR,
+                            "code": "LLM_ERROR",
+                        },
+                    })
+                    break
+
+            # 終了シグナル
+            await queue.put(None)
 
         # チェーンをバックグラウンドで実行
         task = asyncio.create_task(run_chain())

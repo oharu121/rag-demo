@@ -33,6 +33,11 @@ class ErrorMessages:
     SERVICE_UNAVAILABLE = "サービスが一時的に利用できません。"
     INITIALIZATION_IN_PROGRESS = "システムを初期化中です。しばらくお待ちください。"
 
+    # Gemini API関連
+    GEMINI_RATE_LIMITED = "リクエストが多すぎます。少々お待ちください。"
+    GEMINI_QUOTA_EXHAUSTED = "APIの利用枠を超えました。管理者にお問い合わせください。"
+    GEMINI_API_ERROR = "AIサービスでエラーが発生しました。"
+
 
 class RAGException(Exception):
     """RAGアプリケーション用カスタム例外"""
@@ -60,3 +65,18 @@ class ConfigurationException(RAGException):
     """設定関連例外"""
 
     pass
+
+
+class GeminiAPIException(RAGException):
+    """Gemini API固有の例外"""
+
+    def __init__(
+        self,
+        message: str,
+        code: str,
+        is_retryable: bool = False,
+        retry_after: float | None = None,
+    ):
+        super().__init__(message, code)
+        self.is_retryable = is_retryable
+        self.retry_after = retry_after

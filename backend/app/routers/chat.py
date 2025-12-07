@@ -9,7 +9,7 @@ from fastapi.responses import StreamingResponse
 
 from app.models.schemas import ChatRequest, ErrorResponse
 from app.services.rag_service import get_rag_service
-from app.utils.rate_limiter import rate_limiter
+from app.utils.rate_limiter import rate_limiter, global_rate_limiter
 from app.utils.errors import RateLimitException, RAGException, ErrorMessages
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -34,7 +34,29 @@ async def chat(request: Request, chat_request: ChatRequest):
     - event: done - 完了シグナル
     - event: error - エラー
     """
-    # レート制限チェック
+    # グローバルレート制限チェック（APIキー全体の制限）
+    if not global_rate_limiter.check_limit():
+        async def global_rate_limit_error():
+            error_data = {
+                "type": "error",
+                "data": {
+                    "message": ErrorMessages.RATE_LIMIT_EXCEEDED,
+                    "code": "GLOBAL_RATE_LIMIT_EXCEEDED",
+                },
+            }
+            yield f"event: error\ndata: {json.dumps(error_data, ensure_ascii=False)}\n\n"
+
+        return StreamingResponse(
+            global_rate_limit_error(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
+    # Per-IPレート制限チェック（単一ユーザーの乱用防止）
     client_ip = get_client_ip(request)
     if not rate_limiter.check_limit(client_ip):
         async def rate_limit_error():
