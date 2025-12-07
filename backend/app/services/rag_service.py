@@ -127,6 +127,7 @@ class RAGService:
             temperature=self.settings.llm_temperature,
             streaming=streaming,
             callbacks=callbacks,
+            max_retries=0,  # Disable LangChain's internal retry - we handle retries ourselves
         )
 
     def initialize(self) -> None:
