@@ -2,10 +2,37 @@
 アプリケーション設定
 """
 
+from enum import Enum
 from pathlib import Path
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings
+
+
+class ChunkingStrategy(str, Enum):
+    """チャンキング戦略"""
+    STANDARD = "standard"      # 1000/200 - baseline
+    LARGE = "large"            # 2000/500 - more context
+    PARENT_CHILD = "parent_child"  # small chunks for retrieval, parent for context
+
+
+class DocumentSet(str, Enum):
+    """ドキュメントセット"""
+    ORIGINAL = "original"      # Original regulation docs
+    OPTIMIZED = "optimized"    # Preprocessed/restructured docs
+
+
+# Chunking strategy configurations
+CHUNKING_CONFIGS = {
+    ChunkingStrategy.STANDARD: {"chunk_size": 1000, "chunk_overlap": 200},
+    ChunkingStrategy.LARGE: {"chunk_size": 2000, "chunk_overlap": 500},
+    ChunkingStrategy.PARENT_CHILD: {
+        "parent_chunk_size": 2000,
+        "parent_chunk_overlap": 200,
+        "child_chunk_size": 400,
+        "child_chunk_overlap": 50,
+    },
+}
 
 
 class Settings(BaseSettings):
@@ -16,7 +43,8 @@ class Settings(BaseSettings):
 
     # Paths
     base_dir: Path = Path(__file__).parent
-    documents_dir: Path = base_dir / "data" / "sample_documents"
+    documents_dir: Path = base_dir / "data" / "regulations"  # Changed to regulations
+    documents_dir_optimized: Path = base_dir / "data" / "regulations-optimized"
     uploads_dir: Path = base_dir / "data" / "uploads"
     chroma_db_dir: Path = base_dir.parent / "chroma_db"
 
@@ -27,10 +55,14 @@ class Settings(BaseSettings):
     llm_model: str = "gemini-2.0-flash"
     llm_temperature: float = 0.3
 
-    # RAG Config
+    # RAG Config (default values - can be overridden by strategy)
     chunk_size: int = 1000
     chunk_overlap: int = 200
-    retriever_k: int = 3
+    retriever_k: int = 4  # Increased from 3 to get more context
+
+    # Default strategy and dataset
+    default_chunking_strategy: ChunkingStrategy = ChunkingStrategy.STANDARD
+    default_document_set: DocumentSet = DocumentSet.ORIGINAL
 
     # Rate Limiting
     requests_per_minute: int = 15  # Per-IP limit

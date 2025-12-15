@@ -4,12 +4,15 @@
 
 import { API_CONFIG } from "./constants";
 import type {
+  ChunkingStrategy,
   Document,
   DocumentContentResponse,
   DocumentListResponse,
+  DocumentSet,
   DocumentUploadResponse,
   HealthResponse,
   Message,
+  OptionsResponse,
   RebuildResponse,
   Source,
   SSEEvent,
@@ -126,7 +129,11 @@ export async function rebuildVectorstore(): Promise<RebuildResponse> {
  */
 export async function* streamChat(
   message: string,
-  history: Pick<Message, "role" | "content">[]
+  history: Pick<Message, "role" | "content">[],
+  options?: {
+    documentSet?: DocumentSet;
+    strategy?: ChunkingStrategy;
+  }
 ): AsyncGenerator<SSEEvent, void, unknown> {
   const response = await fetch(`${baseUrl}${endpoints.chat}`, {
     method: "POST",
@@ -136,6 +143,8 @@ export async function* streamChat(
     body: JSON.stringify({
       message,
       history: history.map((m) => ({ role: m.role, content: m.content })),
+      document_set: options?.documentSet,
+      strategy: options?.strategy,
     }),
   });
 
@@ -196,4 +205,15 @@ export function parseSourcesFromAPI(
     endLine: s.end_line,
     contentPreview: s.content_preview,
   }));
+}
+
+/**
+ * 利用可能なオプション（戦略、ドキュメントセット）を取得
+ */
+export async function fetchOptions(): Promise<OptionsResponse> {
+  const response = await fetch(`${baseUrl}${endpoints.documents}/options`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch options");
+  }
+  return response.json();
 }

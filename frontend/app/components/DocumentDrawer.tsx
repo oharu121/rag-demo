@@ -160,10 +160,9 @@ export function DocumentDrawer({ isOpen, onClose, documentsHook, onRebuildButton
             </div>
           )}
 
-          {/* Upload section */}
-          <div className="mb-6">
+          {/* Upload section - hidden for demo */}
+          {/* <div className="mb-6">
             <DocumentUpload onUpload={upload} isUploading={isUploading} />
-            {/* Shared visibility warning */}
             <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 mt-3">
               <svg
                 className="w-4 h-4 shrink-0 mt-0.5"
@@ -179,6 +178,25 @@ export function DocumentDrawer({ isOpen, onClose, documentsHook, onRebuildButton
                 />
               </svg>
               <span>アップロードしたファイルは他のユーザーにも表示されます。使用後は削除してください。</span>
+            </div>
+          </div> */}
+
+          {/* Demo info banner */}
+          <div className="mb-6 p-4 bg-linear-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-blue-900">デモ用規程文書</p>
+                <p className="text-xs text-blue-700 mt-1">
+                  社内規程文書のサンプルです。一般ルールと例外規定（附則）が含まれています。
+                  「Optimized」データセットは従業員タイプ別に前処理済みです。
+                </p>
+              </div>
             </div>
           </div>
 

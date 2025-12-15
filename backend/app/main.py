@@ -34,8 +34,10 @@ async def lifespan(app: FastAPI):
     print("=" * 50, flush=True)
     print("登録されたルート:", flush=True)
     for route in app.routes:
-        if hasattr(route, "methods") and hasattr(route, "path"):
-            print(f"  {route.methods} {route.path}", flush=True)
+        methods = getattr(route, "methods", None)
+        path = getattr(route, "path", None)
+        if methods and path:
+            print(f"  {methods} {path}", flush=True)
     print("=" * 50, flush=True)
 
     yield

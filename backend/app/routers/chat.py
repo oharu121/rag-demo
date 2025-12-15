@@ -92,6 +92,8 @@ async def chat(request: Request, chat_request: ChatRequest):
             async for event in rag_service.stream_query(
                 chat_request.message,
                 history,
+                document_set=chat_request.document_set,
+                strategy=chat_request.strategy,
             ):
                 event_type = event.get("type", "token")
                 event_data = json.dumps(event.get("data", {}), ensure_ascii=False)

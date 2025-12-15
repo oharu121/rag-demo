@@ -4,6 +4,8 @@
 
 from fastapi import APIRouter, UploadFile, File, HTTPException
 
+from typing import Literal
+
 from app.models.schemas import (
     DocumentListResponse,
     DocumentInfo,
@@ -62,8 +64,8 @@ async def list_documents() -> DocumentListResponse:
             DocumentInfo(
                 id=doc.id,
                 filename=doc.filename,
-                type=doc.type,
-                status=doc.status,
+                type=doc.type if doc.type in ("sample", "uploaded") else "sample",  # type: ignore[arg-type]
+                status=doc.status if doc.status in ("ready", "processing", "error") else "ready",  # type: ignore[arg-type]
                 line_count=doc.line_count,
             )
             for doc in documents
@@ -149,3 +151,10 @@ async def rebuild_vectorstore() -> RebuildResponse:
         )
     except RAGException as e:
         raise HTTPException(status_code=400, detail=e.message)
+
+
+@router.get("/options")
+async def get_options():
+    """Get available strategies, document sets, and collections for the UI"""
+    rag_service = get_rag_service()
+    return rag_service.get_available_options()

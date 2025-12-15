@@ -1,9 +1,10 @@
 "use client";
 
-import type { Message } from "@/lib/types";
+import type { MessageWithChunks } from "@/hooks/useChat";
 import { SourceCitation } from "./SourceCitation";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { MayaAvatar, type AvatarState } from "./MayaAvatar";
+import { ChunkViewer } from "./ChunkViewer";
 
 /**
  * Renders message content with inline citations styled in blue
@@ -28,7 +29,7 @@ function renderContentWithCitations(content: string): React.ReactNode {
 }
 
 interface MessageBubbleProps {
-  message: Message;
+  message: MessageWithChunks;
 }
 
 export function MessageBubble({ message }: MessageBubbleProps) {
@@ -101,6 +102,15 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               </div>
             );
           })()}
+
+          {/* Chunk visualization */}
+          {message.chunks && message.chunks.length > 0 && message.chunkMeta && (
+            <ChunkViewer
+              chunks={message.chunks}
+              documentSet={message.chunkMeta.documentSet}
+              strategy={message.chunkMeta.strategy}
+            />
+          )}
 
           {/* Loading indicator */}
           {message.isStreaming && !message.content && (

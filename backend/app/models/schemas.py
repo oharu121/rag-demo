@@ -3,9 +3,11 @@ Pydantic スキーマ定義
 """
 
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
+
+from app.config import ChunkingStrategy, DocumentSet
 
 
 # Chat schemas
@@ -21,6 +23,8 @@ class ChatRequest(BaseModel):
 
     message: str = Field(..., min_length=1, max_length=2000)
     history: list[MessageHistory] = Field(default_factory=list)
+    document_set: Optional[DocumentSet] = None
+    strategy: Optional[ChunkingStrategy] = None
 
 
 class Source(BaseModel):

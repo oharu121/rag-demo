@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { useChat } from "@/hooks/useChat";
 import { useServerStatus } from "@/hooks/useServerStatus";
 import { useDocuments } from "@/hooks/useDocuments";
@@ -14,7 +14,8 @@ import { ServerStartingOverlay } from "./ServerStartingOverlay";
 import { OnboardingTooltip } from "./OnboardingTooltip";
 import { PreviewHintCallout } from "./PreviewHintCallout";
 import { UploadGuideCallout } from "./UploadGuideCallout";
-import type { Document } from "@/lib/types";
+import { StrategySelector } from "./StrategySelector";
+import type { Document, ChunkingStrategy, DocumentSet } from "@/lib/types";
 import type { ChatInputRef } from "./ChatInput";
 
 export function ChatInterface() {
@@ -28,12 +29,22 @@ export function ChatInterface() {
   const [showUploadGuide, setShowUploadGuide] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const [rebuildButtonRef, setRebuildButtonRef] = useState<HTMLButtonElement | null>(null);
+  const [documentSet, setDocumentSet] = useState<DocumentSet>("original");
+  const [strategy, setStrategy] = useState<ChunkingStrategy>("standard");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const documentButtonRef = useRef<HTMLButtonElement>(null);
   const documentChipsRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<ChatInputRef>(null);
 
   const totalDocuments = sampleDocuments.length + uploadedDocuments.length;
+
+  // Wrap sendMessage to include current options
+  const handleSendMessage = useCallback(
+    (content: string) => {
+      sendMessage(content, { documentSet, strategy });
+    },
+    [sendMessage, documentSet, strategy]
+  );
   const allDocuments = [...sampleDocuments, ...uploadedDocuments];
   const hasSampleDocs = sampleDocuments.length > 0;
 
@@ -119,6 +130,15 @@ export function ChatInterface() {
             </button>
           </div>
         </header>
+
+        {/* Strategy selector bar */}
+        <StrategySelector
+          documentSet={documentSet}
+          strategy={strategy}
+          onDocumentSetChange={setDocumentSet}
+          onStrategyChange={setStrategy}
+          disabled={isLoading}
+        />
 
         {/* Persistent document chips bar */}
         <DocumentChipsBar
@@ -232,7 +252,7 @@ export function ChatInterface() {
                     {suggestedPrompts.map((prompt, i) => (
                       <button
                         key={i}
-                        onClick={() => sendMessage(prompt)}
+                        onClick={() => handleSendMessage(prompt)}
                         disabled={!isReady}
                         className="px-4 py-2.5 text-sm text-gray-600 bg-white border border-gray-200
                                  rounded-xl hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50/50
@@ -265,7 +285,7 @@ export function ChatInterface() {
         </main>
 
         {/* Input area */}
-        <ChatInput ref={chatInputRef} onSend={sendMessage} disabled={isLoading || !isReady} />
+        <ChatInput ref={chatInputRef} onSend={handleSendMessage} disabled={isLoading || !isReady} />
 
         {/* Document drawer */}
         <DocumentDrawer

@@ -101,7 +101,7 @@ export interface SSESourcesEvent {
 
 export interface SSEDoneEvent {
   type: "done";
-  data: { processing_time_ms: number };
+  data: { processing_time_ms: number; document_set: string; strategy: string };
 }
 
 export interface SSEErrorEvent {
@@ -109,8 +109,65 @@ export interface SSEErrorEvent {
   data: { message: string; code: string };
 }
 
+// Chunk info with score (from chunks event)
+export interface ChunkInfo {
+  filename: string;
+  start_line: number;
+  end_line: number;
+  content: string;
+  content_preview: string;
+  score: number;
+  chunking_strategy: string;
+  has_parent?: boolean;
+  parent_content_preview?: string;
+}
+
+export interface SSEChunksEvent {
+  type: "chunks";
+  data: {
+    chunks: ChunkInfo[];
+    document_set: string;
+    strategy: string;
+  };
+}
+
 export type SSEEvent =
   | SSETokenEvent
   | SSESourcesEvent
+  | SSEChunksEvent
   | SSEDoneEvent
   | SSEErrorEvent;
+
+// Strategy and document set options
+export type ChunkingStrategy = "standard" | "large" | "parent_child";
+export type DocumentSet = "original" | "optimized";
+
+export interface StrategyOption {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface DocumentSetOption {
+  id: string;
+  name: string;
+  description: string;
+  document_count: number;
+}
+
+export interface CollectionInfo {
+  name: string;
+  document_set: string;
+  strategy: string;
+  is_loaded: boolean;
+}
+
+export interface OptionsResponse {
+  strategies: StrategyOption[];
+  document_sets: DocumentSetOption[];
+  collections: CollectionInfo[];
+  defaults: {
+    strategy: string;
+    document_set: string;
+  };
+}

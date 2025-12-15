@@ -19,6 +19,7 @@ node_modules
 
 # next.js
 .next/
+.classmethod
 /out/
 
 # production
@@ -85,3 +86,11 @@ yarn-error.log*
 # Uploads (temp files)
 backend/app/data/uploads/*
 !backend/app/data/uploads/.gitkeep
+
+# Vectorstore data
+backend/app/data/vectorstore/
+
+# Evaluation results
+evaluation/results/
+
+nul

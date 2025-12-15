@@ -1,22 +1,34 @@
 """
-ベクトルストアサービス
+ベクトルストアサービス - 複数コレクション対応
 """
 
 from pathlib import Path
+from typing import Optional
 
 from langchain_chroma import Chroma
 from langchain_core.documents import Document
 
-from app.config import get_settings
+from app.config import get_settings, ChunkingStrategy, DocumentSet
 from app.services.embedding_service import get_embedding_service
 
 
+def get_collection_name(
+    document_set: DocumentSet,
+    strategy: ChunkingStrategy,
+) -> str:
+    """Generate a unique collection name based on document set and strategy"""
+    return f"{document_set.value}_{strategy.value}"
+
+
 class VectorStoreService:
-    """Chromaベクトルストア管理サービス"""
+    """Chromaベクトルストア管理サービス - 複数コレクション対応"""
 
     def __init__(self):
         self.settings = get_settings()
-        self._vectorstore: Chroma | None = None
+        # Store multiple vectorstores keyed by collection name
+        self._vectorstores: dict[str, Chroma] = {}
+        # Track the currently active collection
+        self._current_collection: str | None = None
 
     @property
     def db_path(self) -> Path:
@@ -26,58 +38,176 @@ class VectorStoreService:
     @property
     def is_ready(self) -> bool:
         """ベクトルストアが準備できているかチェック"""
-        return self._vectorstore is not None
+        return self._current_collection is not None and self._current_collection in self._vectorstores
 
-    def get_or_create(self, chunks: list[Document] | None = None) -> Chroma:
-        """既存のベクトルストアを取得、または新規作成"""
+    def get_or_create(
+        self,
+        chunks: list[Document] | None = None,
+        document_set: DocumentSet = DocumentSet.ORIGINAL,
+        strategy: ChunkingStrategy = ChunkingStrategy.STANDARD,
+    ) -> Chroma:
+        """Get or create vectorstore for the specified document set and strategy"""
+        collection_name = get_collection_name(document_set, strategy)
         embedding_service = get_embedding_service()
 
-        if self.db_path.exists() and chunks is None:
-            # 既存のベクトルストアを読み込み
-            print(f"既存のベクトルストアを読み込み中: {self.db_path}", flush=True)
-            self._vectorstore = Chroma(
-                persist_directory=str(self.db_path),
+        # Check if we already have this collection loaded
+        if collection_name in self._vectorstores:
+            self._current_collection = collection_name
+            return self._vectorstores[collection_name]
+
+        # Try to load existing collection
+        collection_path = self.db_path / collection_name
+        if collection_path.exists() and chunks is None:
+            print(f"既存のベクトルストアを読み込み中: {collection_name}", flush=True)
+            vectorstore = Chroma(
+                persist_directory=str(collection_path),
                 embedding_function=embedding_service.embeddings,
+                collection_name=collection_name,
             )
-            return self._vectorstore
+            self._vectorstores[collection_name] = vectorstore
+            self._current_collection = collection_name
+            return vectorstore
 
         if chunks is None:
-            raise ValueError("既存のベクトルストアがなく、チャンクも提供されていません")
+            raise ValueError(f"既存のベクトルストアがなく、チャンクも提供されていません: {collection_name}")
 
-        # 新規ベクトルストアを作成
-        print(f"新しいベクトルストアを作成中: {self.db_path}", flush=True)
-        self._vectorstore = Chroma.from_documents(
+        # Create new vectorstore
+        print(f"新しいベクトルストアを作成中: {collection_name}", flush=True)
+        collection_path.mkdir(parents=True, exist_ok=True)
+        vectorstore = Chroma.from_documents(
             documents=chunks,
             embedding=embedding_service.embeddings,
-            persist_directory=str(self.db_path),
+            persist_directory=str(collection_path),
+            collection_name=collection_name,
         )
-        return self._vectorstore
+        self._vectorstores[collection_name] = vectorstore
+        self._current_collection = collection_name
+        return vectorstore
 
-    def rebuild(self, chunks: list[Document]) -> Chroma:
-        """ベクトルストアを再構築"""
-        # 既存のコレクションを削除
-        if self._vectorstore is not None:
+    def rebuild(
+        self,
+        chunks: list[Document],
+        document_set: DocumentSet = DocumentSet.ORIGINAL,
+        strategy: ChunkingStrategy = ChunkingStrategy.STANDARD,
+    ) -> Chroma:
+        """Rebuild vectorstore for the specified document set and strategy"""
+        collection_name = get_collection_name(document_set, strategy)
+
+        # Delete existing collection if it exists
+        if collection_name in self._vectorstores:
             try:
-                self._vectorstore._client.delete_collection(
-                    self._vectorstore._collection.name
-                )
+                vectorstore = self._vectorstores[collection_name]
+                vectorstore._client.delete_collection(collection_name)
             except Exception:
-                pass  # コレクションが存在しない場合
+                pass
+            del self._vectorstores[collection_name]
 
-        # 新規作成
-        return self.get_or_create(chunks)
+        # Delete the directory
+        collection_path = self.db_path / collection_name
+        if collection_path.exists():
+            import shutil
+            shutil.rmtree(collection_path)
 
-    def get_retriever(self, k: int | None = None):
-        """リトリーバーを取得"""
-        if self._vectorstore is None:
+        # Create new
+        return self.get_or_create(chunks, document_set, strategy)
+
+    def get_retriever(
+        self,
+        k: int | None = None,
+        document_set: Optional[DocumentSet] = None,
+        strategy: Optional[ChunkingStrategy] = None,
+    ):
+        """Get retriever for the specified or current collection"""
+        if document_set is not None and strategy is not None:
+            collection_name = get_collection_name(document_set, strategy)
+            if collection_name not in self._vectorstores:
+                raise ValueError(f"ベクトルストアが初期化されていません: {collection_name}")
+            vectorstore = self._vectorstores[collection_name]
+        elif self._current_collection is not None:
+            vectorstore = self._vectorstores[self._current_collection]
+        else:
             raise ValueError("ベクトルストアが初期化されていません")
 
         k = k or self.settings.retriever_k
-        return self._vectorstore.as_retriever(search_kwargs={"k": k})
+        return vectorstore.as_retriever(search_kwargs={"k": k})
 
-    def exists(self) -> bool:
-        """ベクトルストアが存在するかチェック"""
-        return self.db_path.exists()
+    def similarity_search_with_score(
+        self,
+        query: str,
+        k: int | None = None,
+        document_set: Optional[DocumentSet] = None,
+        strategy: Optional[ChunkingStrategy] = None,
+    ) -> list[tuple[Document, float]]:
+        """
+        Perform similarity search and return documents with scores.
+        Useful for chunk visualization.
+        """
+        if document_set is not None and strategy is not None:
+            collection_name = get_collection_name(document_set, strategy)
+            if collection_name not in self._vectorstores:
+                raise ValueError(f"ベクトルストアが初期化されていません: {collection_name}")
+            vectorstore = self._vectorstores[collection_name]
+        elif self._current_collection is not None:
+            vectorstore = self._vectorstores[self._current_collection]
+        else:
+            raise ValueError("ベクトルストアが初期化されていません")
+
+        k = k or self.settings.retriever_k
+        return vectorstore.similarity_search_with_score(query, k=k)
+
+    def exists(
+        self,
+        document_set: Optional[DocumentSet] = None,
+        strategy: Optional[ChunkingStrategy] = None,
+    ) -> bool:
+        """Check if vectorstore exists for the specified or default collection"""
+        if document_set is not None and strategy is not None:
+            collection_name = get_collection_name(document_set, strategy)
+            collection_path = self.db_path / collection_name
+            return collection_path.exists()
+
+        # Check if any collection exists
+        return self.db_path.exists() and any(self.db_path.iterdir())
+
+    def get_available_collections(self) -> list[dict]:
+        """Get list of available (built) collections"""
+        collections = []
+        if not self.db_path.exists():
+            return collections
+
+        for path in self.db_path.iterdir():
+            if path.is_dir():
+                parts = path.name.split("_")
+                if len(parts) >= 2:
+                    doc_set = parts[0]
+                    strategy = "_".join(parts[1:])
+                    collections.append({
+                        "name": path.name,
+                        "document_set": doc_set,
+                        "strategy": strategy,
+                        "is_loaded": path.name in self._vectorstores,
+                    })
+        return collections
+
+    def set_active_collection(
+        self,
+        document_set: DocumentSet,
+        strategy: ChunkingStrategy,
+    ) -> bool:
+        """Set the active collection (must already be loaded or exist on disk)"""
+        collection_name = get_collection_name(document_set, strategy)
+
+        if collection_name in self._vectorstores:
+            self._current_collection = collection_name
+            return True
+
+        # Try to load from disk
+        collection_path = self.db_path / collection_name
+        if collection_path.exists():
+            self.get_or_create(document_set=document_set, strategy=strategy)
+            return True
+
+        return False
 
 
 # シングルトンインスタンス

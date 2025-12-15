@@ -11,7 +11,12 @@ from langchain_community.document_loaders import DirectoryLoader
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from app.config import get_settings
+from app.config import (
+    get_settings,
+    ChunkingStrategy,
+    DocumentSet,
+    CHUNKING_CONFIGS,
+)
 from app.utils.line_tracker import LineTrackingTextLoader, calculate_line_numbers
 from app.utils.errors import DocumentException, ErrorMessages
 
@@ -54,6 +59,14 @@ class DocumentService:
         """必要なディレクトリを作成"""
         self.settings.documents_dir.mkdir(parents=True, exist_ok=True)
         self.settings.uploads_dir.mkdir(parents=True, exist_ok=True)
+        # Also ensure optimized docs directory exists
+        self.settings.documents_dir_optimized.mkdir(parents=True, exist_ok=True)
+
+    def _get_documents_dir(self, document_set: DocumentSet) -> Path:
+        """Get the documents directory for the specified document set"""
+        if document_set == DocumentSet.OPTIMIZED:
+            return self.settings.documents_dir_optimized
+        return self.settings.documents_dir
 
     def _iter_documents(self, directory: Path):
         """指定ディレクトリ内の.txtと.mdファイルをイテレート"""
@@ -65,25 +78,33 @@ class DocumentService:
         hash_input = f"{filename}:{content[:100]}"
         return hashlib.md5(hash_input.encode()).hexdigest()[:12]
 
-    def load_documents(self) -> list[Document]:
-        """サンプルとアップロードされたドキュメントを全て読み込む"""
+    def load_documents(
+        self,
+        document_set: DocumentSet = DocumentSet.ORIGINAL
+    ) -> list[Document]:
+        """Load documents from the specified document set"""
         documents: list[Document] = []
 
-        # サンプルドキュメントを読み込み
-        if self.settings.documents_dir.exists():
-            sample_docs = self._load_from_directory(self.settings.documents_dir)
-            for doc in sample_docs:
-                doc.metadata["doc_type"] = "sample"
-            documents.extend(sample_docs)
+        # Get the appropriate directory
+        docs_dir = self._get_documents_dir(document_set)
 
-        # アップロードされたドキュメントを読み込み
+        # Load documents from the directory
+        if docs_dir.exists():
+            loaded_docs = self._load_from_directory(docs_dir)
+            for doc in loaded_docs:
+                doc.metadata["doc_type"] = "sample"
+                doc.metadata["document_set"] = document_set.value
+            documents.extend(loaded_docs)
+
+        # Also load uploaded documents (always included)
         if self.settings.uploads_dir.exists():
             uploaded_docs = self._load_from_directory(self.settings.uploads_dir)
             for doc in uploaded_docs:
                 doc.metadata["doc_type"] = "uploaded"
+                doc.metadata["document_set"] = "uploaded"
             documents.extend(uploaded_docs)
 
-        print(f"{len(documents)}個のドキュメントを読み込みました", flush=True)
+        print(f"{len(documents)}個のドキュメントを読み込みました (document_set={document_set.value})", flush=True)
         return documents
 
     def _load_from_directory(self, directory: Path) -> list[Document]:
@@ -102,31 +123,112 @@ class DocumentService:
             documents.extend(loader.load())
         return documents
 
-    def split_documents(self, documents: list[Document]) -> list[Document]:
-        """ドキュメントをチャンクに分割"""
+    def split_documents(
+        self,
+        documents: list[Document],
+        strategy: ChunkingStrategy = ChunkingStrategy.STANDARD,
+    ) -> list[Document]:
+        """Split documents into chunks using the specified strategy"""
         if not documents:
             return []
 
+        config = CHUNKING_CONFIGS[strategy]
+
+        if strategy == ChunkingStrategy.PARENT_CHILD:
+            return self._split_parent_child(documents, config)
+        else:
+            return self._split_standard(documents, config)
+
+    def _split_standard(
+        self,
+        documents: list[Document],
+        config: dict,
+    ) -> list[Document]:
+        """Standard chunking strategy"""
         splitter = RecursiveCharacterTextSplitter(
-            chunk_size=self.settings.chunk_size,
-            chunk_overlap=self.settings.chunk_overlap,
+            chunk_size=config["chunk_size"],
+            chunk_overlap=config["chunk_overlap"],
             length_function=len,
             add_start_index=True,
         )
         chunks = splitter.split_documents(documents)
 
-        # 行番号をメタデータに追加
+        # Add line numbers to metadata
         chunks = calculate_line_numbers(chunks)
 
-        print(f"{len(chunks)}個のチャンクに分割しました", flush=True)
+        # Add chunking metadata
+        for chunk in chunks:
+            chunk.metadata["chunking_strategy"] = "standard"
+            chunk.metadata["chunk_size"] = config["chunk_size"]
+
+        print(f"{len(chunks)}個のチャンクに分割しました (standard)", flush=True)
         return chunks
 
-    def list_documents(self) -> list[DocumentInfo]:
-        """全てのドキュメント情報を取得"""
+    def _split_parent_child(
+        self,
+        documents: list[Document],
+        config: dict,
+    ) -> list[Document]:
+        """
+        Parent-child chunking strategy.
+
+        Creates small chunks for retrieval but stores reference to parent chunk
+        for providing more context to the LLM.
+        """
+        # First, create parent chunks
+        parent_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=config["parent_chunk_size"],
+            chunk_overlap=config["parent_chunk_overlap"],
+            length_function=len,
+            add_start_index=True,
+        )
+        parent_chunks = parent_splitter.split_documents(documents)
+
+        # Then create child chunks from each parent
+        child_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=config["child_chunk_size"],
+            chunk_overlap=config["child_chunk_overlap"],
+            length_function=len,
+            add_start_index=True,
+        )
+
+        all_chunks = []
+        for i, parent in enumerate(parent_chunks):
+            # Create a document from the parent's content
+            parent_doc = Document(
+                page_content=parent.page_content,
+                metadata=parent.metadata.copy(),
+            )
+
+            # Split into child chunks
+            child_chunks = child_splitter.split_documents([parent_doc])
+
+            # Add parent reference to each child
+            for child in child_chunks:
+                child.metadata["parent_id"] = i
+                child.metadata["parent_content"] = parent.page_content
+                child.metadata["chunking_strategy"] = "parent_child"
+                child.metadata["is_child"] = True
+
+            all_chunks.extend(child_chunks)
+
+        # Add line numbers to metadata
+        all_chunks = calculate_line_numbers(all_chunks)
+
+        print(f"{len(all_chunks)}個のチャンクに分割しました (parent-child: {len(parent_chunks)} parents)", flush=True)
+        return all_chunks
+
+    def list_documents(
+        self,
+        document_set: DocumentSet = DocumentSet.ORIGINAL
+    ) -> list[DocumentInfo]:
+        """Get document info for the specified document set"""
         documents: list[DocumentInfo] = []
 
-        # サンプルドキュメント
-        for file_path in self._iter_documents(self.settings.documents_dir):
+        # Get documents from the appropriate directory
+        docs_dir = self._get_documents_dir(document_set)
+
+        for file_path in self._iter_documents(docs_dir):
             content = file_path.read_text(encoding="utf-8")
             line_count = len(content.split("\n"))
             doc_id = self._generate_id(file_path.name, content)
@@ -140,7 +242,7 @@ class DocumentService:
                 )
             )
 
-        # アップロードされたドキュメント
+        # Also list uploaded documents
         for file_path in self._iter_documents(self.settings.uploads_dir):
             content = file_path.read_text(encoding="utf-8")
             line_count = len(content.split("\n"))
@@ -201,27 +303,35 @@ class DocumentService:
 
         raise DocumentException(ErrorMessages.DOCUMENT_NOT_FOUND, "NOT_FOUND")
 
-    def has_documents(self) -> bool:
-        """ドキュメントが存在するかチェック"""
-        sample_exists = any(self._iter_documents(self.settings.documents_dir))
+    def has_documents(
+        self,
+        document_set: DocumentSet = DocumentSet.ORIGINAL
+    ) -> bool:
+        """Check if documents exist for the specified document set"""
+        docs_dir = self._get_documents_dir(document_set)
+        sample_exists = any(self._iter_documents(docs_dir))
         uploads_exist = any(self._iter_documents(self.settings.uploads_dir))
         return sample_exists or uploads_exist
 
     def get_document_content(self, doc_id: str) -> tuple[DocumentInfo, str]:
         """ドキュメントの内容を取得"""
-        # サンプルドキュメントを検索
-        for file_path in self._iter_documents(self.settings.documents_dir):
-            content = file_path.read_text(encoding="utf-8")
-            if self._generate_id(file_path.name, content) == doc_id:
-                line_count = len(content.split("\n"))
-                doc_info = DocumentInfo(
-                    id=doc_id,
-                    filename=file_path.name,
-                    doc_type="sample",
-                    status="ready",
-                    line_count=line_count,
-                )
-                return doc_info, content
+        # Check both original and optimized directories
+        for docs_dir, doc_set in [
+            (self.settings.documents_dir, DocumentSet.ORIGINAL),
+            (self.settings.documents_dir_optimized, DocumentSet.OPTIMIZED),
+        ]:
+            for file_path in self._iter_documents(docs_dir):
+                content = file_path.read_text(encoding="utf-8")
+                if self._generate_id(file_path.name, content) == doc_id:
+                    line_count = len(content.split("\n"))
+                    doc_info = DocumentInfo(
+                        id=doc_id,
+                        filename=file_path.name,
+                        doc_type="sample",
+                        status="ready",
+                        line_count=line_count,
+                    )
+                    return doc_info, content
 
         # アップロードされたドキュメントを検索
         for file_path in self._iter_documents(self.settings.uploads_dir):
@@ -238,6 +348,46 @@ class DocumentService:
                 return doc_info, content
 
         raise DocumentException(ErrorMessages.DOCUMENT_NOT_FOUND, "NOT_FOUND")
+
+    def get_available_strategies(self) -> list[dict]:
+        """Get list of available chunking strategies with descriptions"""
+        return [
+            {
+                "id": ChunkingStrategy.STANDARD.value,
+                "name": "Standard (1000/200)",
+                "description": "標準的なチャンキング。チャンクサイズ1000文字、オーバーラップ200文字。",
+            },
+            {
+                "id": ChunkingStrategy.LARGE.value,
+                "name": "Large (2000/500)",
+                "description": "大きめのチャンク。より多くのコンテキストを保持。",
+            },
+            {
+                "id": ChunkingStrategy.PARENT_CHILD.value,
+                "name": "Parent-Child",
+                "description": "小さなチャンクで検索し、親チャンクをコンテキストとして使用。",
+            },
+        ]
+
+    def get_available_document_sets(self) -> list[dict]:
+        """Get list of available document sets with descriptions"""
+        original_count = len(list(self._iter_documents(self.settings.documents_dir)))
+        optimized_count = len(list(self._iter_documents(self.settings.documents_dir_optimized)))
+
+        return [
+            {
+                "id": DocumentSet.ORIGINAL.value,
+                "name": "Original Documents",
+                "description": f"元の規程文書 ({original_count}ファイル)",
+                "document_count": original_count,
+            },
+            {
+                "id": DocumentSet.OPTIMIZED.value,
+                "name": "Optimized Documents",
+                "description": f"前処理済み文書 ({optimized_count}ファイル)",
+                "document_count": optimized_count,
+            },
+        ]
 
 
 # シングルトンインスタンス

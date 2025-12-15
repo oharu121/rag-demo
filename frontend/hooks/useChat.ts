@@ -1,22 +1,35 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import type { Message, Source, SSEEvent } from "@/lib/types";
+import type { Message, Source, SSEEvent, ChunkInfo, ChunkingStrategy, DocumentSet } from "@/lib/types";
 import { streamChat, parseSourcesFromAPI } from "@/lib/api";
 import { UI_TEXT, ERROR_CODE_MESSAGES } from "@/lib/constants";
+
+export interface ChatOptions {
+  documentSet?: DocumentSet;
+  strategy?: ChunkingStrategy;
+}
+
+export interface MessageWithChunks extends Message {
+  chunks?: ChunkInfo[];
+  chunkMeta?: {
+    documentSet: string;
+    strategy: string;
+  };
+}
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 15);
 }
 
 export function useChat() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<MessageWithChunks[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const isLoadingRef = useRef(false);
 
-  const sendMessage = useCallback(async (content: string) => {
+  const sendMessage = useCallback(async (content: string, options?: ChatOptions) => {
     if (!content.trim() || isLoadingRef.current) return;
 
     setError(null);
@@ -32,7 +45,7 @@ export function useChat() {
     };
 
     // Create assistant message placeholder
-    const assistantMessage: Message = {
+    const assistantMessage: MessageWithChunks = {
       id: generateId(),
       role: "assistant",
       content: "",
@@ -60,7 +73,7 @@ export function useChat() {
       let sources: Source[] = [];
       let fullContent = "";
 
-      for await (const event of streamChat(content, history)) {
+      for await (const event of streamChat(content, history, options)) {
         switch (event.type) {
           case "token":
             fullContent += event.data.token;
@@ -78,6 +91,23 @@ export function useChat() {
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantMessage.id ? { ...m, sources } : m
+              )
+            );
+            break;
+
+          case "chunks":
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMessage.id
+                  ? {
+                      ...m,
+                      chunks: event.data.chunks,
+                      chunkMeta: {
+                        documentSet: event.data.document_set,
+                        strategy: event.data.strategy,
+                      },
+                    }
+                  : m
               )
             );
             break;

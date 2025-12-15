@@ -1,5 +1,5 @@
 """
-RAGサービス - ストリーミング対応
+RAGサービス - ストリーミング対応 + 戦略切り替え対応
 """
 
 import asyncio
@@ -7,7 +7,7 @@ import json
 import re
 import time
 from pathlib import Path
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 
 from google.api_core.exceptions import ResourceExhausted
 from langchain_core.callbacks import BaseCallbackHandler
@@ -17,7 +17,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-from app.config import get_settings
+from app.config import get_settings, ChunkingStrategy, DocumentSet
 from app.services.document_service import get_document_service
 from app.services.vectorstore_service import get_vectorstore_service
 from app.services.embedding_service import get_embedding_service
@@ -75,7 +75,7 @@ class StreamingCallbackHandler(BaseCallbackHandler):
         self.queue.put_nowait({"type": "token", "data": {"token": token}})
 
 
-def format_docs_with_citations(docs: list[Document]) -> str:
+def format_docs_with_citations(docs: list[Document], use_parent_content: bool = False) -> str:
     """引用メタデータ付きでドキュメントをフォーマット"""
     formatted = []
     for doc in docs:
@@ -87,7 +87,14 @@ def format_docs_with_citations(docs: list[Document]) -> str:
         filename = Path(source).name
 
         header = f"[出典: {filename}, {start_line}-{end_line}行目]"
-        formatted.append(f"{header}\n{doc.page_content}")
+
+        # Parent-child strategyの場合、親コンテンツを使用
+        if use_parent_content and doc.metadata.get("parent_content"):
+            content = doc.metadata["parent_content"]
+        else:
+            content = doc.page_content
+
+        formatted.append(f"{header}\n{content}")
 
     return "\n\n---\n\n".join(formatted)
 
@@ -130,29 +137,60 @@ class RAGService:
             max_retries=0,  # Disable LangChain's internal retry - we handle retries ourselves
         )
 
-    def initialize(self) -> None:
+    def initialize(
+        self,
+        document_set: Optional[DocumentSet] = None,
+        strategy: Optional[ChunkingStrategy] = None,
+    ) -> None:
         """サービスを初期化"""
-        if self._initialized:
-            return
-
         # 埋め込みサービスを初期化
         embedding_service = get_embedding_service()
         _ = embedding_service.embeddings  # モデルをロード
+
+        # Use defaults if not specified
+        document_set = document_set or self.settings.default_document_set
+        strategy = strategy or self.settings.default_chunking_strategy
 
         # ドキュメントサービスを取得
         doc_service = get_document_service()
         vectorstore_service = get_vectorstore_service()
 
-        # ベクトルストアを初期化
-        if vectorstore_service.exists():
-            vectorstore_service.get_or_create()
-        elif doc_service.has_documents():
-            documents = doc_service.load_documents()
-            chunks = doc_service.split_documents(documents)
-            vectorstore_service.get_or_create(chunks)
+        # ベクトルストアを初期化 (指定されたdocument_setとstrategyで)
+        if vectorstore_service.exists(document_set, strategy):
+            vectorstore_service.get_or_create(
+                document_set=document_set,
+                strategy=strategy,
+            )
+        elif doc_service.has_documents(document_set):
+            documents = doc_service.load_documents(document_set)
+            chunks = doc_service.split_documents(documents, strategy)
+            vectorstore_service.get_or_create(chunks, document_set, strategy)
 
         self._initialized = True
-        print("RAGサービスの初期化完了", flush=True)
+        print(f"RAGサービスの初期化完了 (document_set={document_set.value}, strategy={strategy.value})", flush=True)
+
+    def ensure_collection_ready(
+        self,
+        document_set: DocumentSet,
+        strategy: ChunkingStrategy,
+    ) -> bool:
+        """Ensure the specified collection is ready, building if necessary"""
+        vectorstore_service = get_vectorstore_service()
+        doc_service = get_document_service()
+
+        # Try to set active collection (loads from disk if exists)
+        if vectorstore_service.set_active_collection(document_set, strategy):
+            return True
+
+        # Need to build the collection
+        if not doc_service.has_documents(document_set):
+            return False
+
+        print(f"Building collection: {document_set.value}_{strategy.value}", flush=True)
+        documents = doc_service.load_documents(document_set)
+        chunks = doc_service.split_documents(documents, strategy)
+        vectorstore_service.get_or_create(chunks, document_set, strategy)
+        return True
 
     @property
     def is_ready(self) -> bool:
@@ -169,31 +207,77 @@ class RAGService:
         self,
         question: str,
         history: list[dict] | None = None,
+        document_set: Optional[DocumentSet] = None,
+        strategy: Optional[ChunkingStrategy] = None,
     ) -> AsyncGenerator[dict, None]:
         """ストリーミングでRAGクエリを実行"""
         start_time = time.time()
 
+        # Use defaults if not specified
+        document_set = document_set or self.settings.default_document_set
+        strategy = strategy or self.settings.default_chunking_strategy
+
         # 初期化チェック
         if not self._initialized:
-            self.initialize()
+            self.initialize(document_set, strategy)
 
-        vectorstore_service = get_vectorstore_service()
-        if not vectorstore_service.is_ready:
+        # Ensure the requested collection is ready
+        if not self.ensure_collection_ready(document_set, strategy):
             yield {
                 "type": "error",
-                "data": {"message": ErrorMessages.VECTORSTORE_NOT_READY},
+                "data": {"message": f"ドキュメントセット '{document_set.value}' が見つかりません"},
             }
             return
 
-        # リトリーバーを取得
-        retriever = vectorstore_service.get_retriever()
+        vectorstore_service = get_vectorstore_service()
 
-        # 関連ドキュメントを取得
-        docs = retriever.invoke(question)
+        # 関連ドキュメントをスコア付きで取得
+        docs_with_scores = vectorstore_service.similarity_search_with_score(
+            question,
+            document_set=document_set,
+            strategy=strategy,
+        )
 
-        # ソース情報を先に送信
+        # docsのみのリストも作成
+        docs = [doc for doc, score in docs_with_scores]
+
+        # Determine if we should use parent content
+        use_parent = strategy == ChunkingStrategy.PARENT_CHILD
+
+        # チャンク情報を送信（スコア付き）
+        chunks_info = []
+        for doc, score in docs_with_scores:
+            source = doc.metadata.get("source", "unknown")
+            chunk_info = {
+                "filename": Path(source).name,
+                "start_line": doc.metadata.get("start_line", 0),
+                "end_line": doc.metadata.get("end_line", 0),
+                "content": doc.page_content,
+                "content_preview": doc.page_content[:150] + "..." if len(doc.page_content) > 150 else doc.page_content,
+                "score": round(float(score), 4),
+                "chunking_strategy": doc.metadata.get("chunking_strategy", "unknown"),
+            }
+
+            # Add parent content if available
+            if doc.metadata.get("parent_content"):
+                chunk_info["has_parent"] = True
+                chunk_info["parent_content_preview"] = doc.metadata["parent_content"][:200] + "..."
+
+            chunks_info.append(chunk_info)
+
+        # Send chunks event (renamed from sources for clarity)
+        yield {
+            "type": "chunks",
+            "data": {
+                "chunks": chunks_info,
+                "document_set": document_set.value,
+                "strategy": strategy.value,
+            }
+        }
+
+        # Also send sources for backwards compatibility
         sources = []
-        for doc in docs:
+        for doc, score in docs_with_scores:
             source = doc.metadata.get("source", "unknown")
             sources.append({
                 "filename": Path(source).name,
@@ -204,8 +288,8 @@ class RAGService:
 
         yield {"type": "sources", "data": {"sources": sources}}
 
-        # コンテキストをフォーマット
-        context = format_docs_with_citations(docs)
+        # コンテキストをフォーマット (parent-childの場合は親コンテンツを使用)
+        context = format_docs_with_citations(docs, use_parent_content=use_parent)
         history_text = format_history(history or [])
 
         # プロンプトを構築
@@ -307,21 +391,170 @@ class RAGService:
 
         # 完了イベントを送信
         processing_time = int((time.time() - start_time) * 1000)
-        yield {"type": "done", "data": {"processing_time_ms": processing_time}}
+        yield {
+            "type": "done",
+            "data": {
+                "processing_time_ms": processing_time,
+                "document_set": document_set.value,
+                "strategy": strategy.value,
+            }
+        }
 
-    def rebuild_vectorstore(self) -> int:
+    def rebuild_vectorstore(
+        self,
+        document_set: Optional[DocumentSet] = None,
+        strategy: Optional[ChunkingStrategy] = None,
+    ) -> int:
         """ベクトルストアを再構築"""
+        document_set = document_set or self.settings.default_document_set
+        strategy = strategy or self.settings.default_chunking_strategy
+
         doc_service = get_document_service()
         vectorstore_service = get_vectorstore_service()
 
-        if not doc_service.has_documents():
+        if not doc_service.has_documents(document_set):
             raise RAGException(ErrorMessages.NO_DOCUMENTS, "NO_DOCUMENTS")
 
-        documents = doc_service.load_documents()
-        chunks = doc_service.split_documents(documents)
-        vectorstore_service.rebuild(chunks)
+        documents = doc_service.load_documents(document_set)
+        chunks = doc_service.split_documents(documents, strategy)
+        vectorstore_service.rebuild(chunks, document_set, strategy)
 
         return len(chunks)
+
+    def get_available_options(self) -> dict:
+        """Get available strategies and document sets for the UI"""
+        doc_service = get_document_service()
+        vectorstore_service = get_vectorstore_service()
+
+        return {
+            "strategies": doc_service.get_available_strategies(),
+            "document_sets": doc_service.get_available_document_sets(),
+            "collections": vectorstore_service.get_available_collections(),
+            "defaults": {
+                "strategy": self.settings.default_chunking_strategy.value,
+                "document_set": self.settings.default_document_set.value,
+            }
+        }
+
+    def query(
+        self,
+        question: str,
+        history: list[dict] | None = None,
+        document_set: Optional[str] = None,
+        strategy: Optional[str] = None,
+    ) -> dict:
+        """
+        Synchronous RAG query for evaluation scripts.
+
+        Args:
+            question: The query question
+            history: Optional conversation history
+            document_set: Document set name (string for evaluation convenience)
+            strategy: Chunking strategy name (string for evaluation convenience)
+
+        Returns:
+            dict with 'answer' and 'chunks' keys
+        """
+        # Convert string params to enums if provided
+        doc_set_enum = DocumentSet(document_set) if document_set else self.settings.default_document_set
+        strategy_enum = ChunkingStrategy(strategy) if strategy else self.settings.default_chunking_strategy
+
+        # Initialize if needed
+        if not self._initialized:
+            self.initialize(doc_set_enum, strategy_enum)
+
+        # Ensure the requested collection is ready
+        if not self.ensure_collection_ready(doc_set_enum, strategy_enum):
+            return {
+                "answer": f"ドキュメントセット '{doc_set_enum.value}' が見つかりません",
+                "chunks": []
+            }
+
+        vectorstore_service = get_vectorstore_service()
+
+        # Get docs with scores
+        docs_with_scores = vectorstore_service.similarity_search_with_score(
+            question,
+            document_set=doc_set_enum,
+            strategy=strategy_enum,
+        )
+
+        docs = [doc for doc, score in docs_with_scores]
+
+        # Determine if we should use parent content
+        use_parent = strategy_enum == ChunkingStrategy.PARENT_CHILD
+
+        # Build chunks info
+        chunks_info = []
+        for doc, score in docs_with_scores:
+            source = doc.metadata.get("source", "unknown")
+            chunk_info = {
+                "filename": Path(source).name,
+                "start_line": doc.metadata.get("start_line", 0),
+                "end_line": doc.metadata.get("end_line", 0),
+                "content": doc.page_content,
+                "content_preview": doc.page_content[:150] + "..." if len(doc.page_content) > 150 else doc.page_content,
+                "score": round(float(score), 4),
+            }
+            if doc.metadata.get("parent_content"):
+                chunk_info["has_parent"] = True
+                chunk_info["parent_content_preview"] = doc.metadata["parent_content"][:200] + "..."
+            chunks_info.append(chunk_info)
+
+        # Format context
+        context = format_docs_with_citations(docs, use_parent_content=use_parent)
+        history_text = format_history(history or [])
+
+        # Build prompt
+        template = """あなたは親切なアシスタントです。以下のコンテキストに基づいて質問に答えてください。
+各コンテキストチャンクには、出典ファイルと行番号が角括弧で表示されています。
+回答にコンテキストの情報を使用する場合は、[ファイル名:行番号]の形式で引用してください。
+
+コンテキストに答えが見つからない場合は、「この情報はドキュメントに含まれていません。」と答えてください。
+
+{history_section}
+
+コンテキスト:
+{context}
+
+質問: {question}
+
+回答（引用を含めてください）:"""
+
+        history_section = f"会話履歴:\n{history_text}\n" if history_text else ""
+
+        prompt = ChatPromptTemplate.from_template(template)
+
+        # Get LLM (non-streaming)
+        llm = self._get_llm(streaming=False)
+
+        # Build and run chain
+        chain = prompt | llm | StrOutputParser()
+
+        try:
+            answer = chain.invoke({
+                "context": context,
+                "question": question,
+                "history_section": history_section,
+            })
+        except ResourceExhausted as e:
+            gemini_error = classify_gemini_error(e)
+            return {
+                "answer": gemini_error.message,
+                "chunks": chunks_info,
+                "error": gemini_error.code,
+            }
+        except Exception as e:
+            return {
+                "answer": f"エラーが発生しました: {str(e)}",
+                "chunks": chunks_info,
+                "error": "LLM_ERROR",
+            }
+
+        return {
+            "answer": answer,
+            "chunks": chunks_info,
+        }
 
 
 # シングルトンインスタンス
