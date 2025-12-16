@@ -5,6 +5,7 @@ import { SourceCitation } from "./SourceCitation";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { MayaAvatar, type AvatarState } from "./MayaAvatar";
 import { ChunkViewer } from "./ChunkViewer";
+import { ScoringAnnotation } from "./ScoringAnnotation";
 
 /**
  * Renders message content with inline citations styled in blue
@@ -111,6 +112,9 @@ export function MessageBubble({ message }: MessageBubbleProps) {
               strategy={message.chunkMeta.strategy}
             />
           )}
+
+          {/* Scoring annotation (for evaluation mode) */}
+          {message.scoring && <ScoringAnnotation scoring={message.scoring} />}
 
           {/* Loading indicator */}
           {message.isStreaming && !message.content && (

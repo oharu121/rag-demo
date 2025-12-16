@@ -46,13 +46,13 @@ export function UploadGuideCallout({ onDismiss, targetRef }: UploadGuideCalloutP
     <>
       {/* Backdrop - lower z-index than drawer (z-50) but clickable */}
       <div
-        className="fixed inset-0 bg-black/20 z-[45] animate-fade-in"
+        className="fixed inset-0 bg-black/20 z-45 animate-fade-in"
         onClick={handleDismiss}
       />
 
       {/* Callout positioned above the re-index button */}
       <div
-        className="fixed z-[55] animate-fade-in-down"
+        className="fixed z-55 animate-fade-in-down"
         style={{
           bottom: position.bottom,
           left: position.left,

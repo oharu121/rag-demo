@@ -14,12 +14,14 @@ import { ServerStartingOverlay } from "./ServerStartingOverlay";
 import { OnboardingTooltip } from "./OnboardingTooltip";
 import { PreviewHintCallout } from "./PreviewHintCallout";
 import { UploadGuideCallout } from "./UploadGuideCallout";
-import { StrategySelector } from "./StrategySelector";
-import type { Document, ChunkingStrategy, DocumentSet } from "@/lib/types";
+import { DatasetSelector } from "./DatasetSelector";
+import { EvaluationSummary } from "./EvaluationSummary";
+import { runEvaluation } from "@/lib/api";
+import type { Document, ChunkingStrategy, DocumentSet, ScoringData, EvaluationScore } from "@/lib/types";
 import type { ChatInputRef } from "./ChatInput";
 
 export function ChatInterface() {
-  const { messages, isLoading, error, sendMessage, clearError } = useChat();
+  const { messages, isLoading, error, sendMessage, clearMessages, clearError, addEvaluationMessage, setIsLoading } = useChat();
   const { isReady, isStarting } = useServerStatus();
   const documentsHook = useDocuments();
   const { sampleDocuments, uploadedDocuments } = documentsHook;
@@ -31,6 +33,9 @@ export function ChatInterface() {
   const [rebuildButtonRef, setRebuildButtonRef] = useState<HTMLButtonElement | null>(null);
   const [documentSet, setDocumentSet] = useState<DocumentSet>("original");
   const [strategy, setStrategy] = useState<ChunkingStrategy>("standard");
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [evaluationProgress, setEvaluationProgress] = useState({ current: 0, total: 0 });
+  const [evaluationScore, setEvaluationScore] = useState<EvaluationScore | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const documentButtonRef = useRef<HTMLButtonElement>(null);
   const documentChipsRef = useRef<HTMLDivElement>(null);
@@ -45,6 +50,62 @@ export function ChatInterface() {
     },
     [sendMessage, documentSet, strategy]
   );
+
+  // Clear chat when dataset changes
+  const handleDocumentSetChange = useCallback(
+    (newDocumentSet: DocumentSet) => {
+      if (newDocumentSet !== documentSet) {
+        clearMessages();
+        setDocumentSet(newDocumentSet);
+        setEvaluationScore(null);
+      }
+    },
+    [documentSet, clearMessages]
+  );
+
+  // Run evaluation test
+  const handleRunEvaluation = useCallback(async () => {
+    if (isEvaluating || isLoading) return;
+
+    setIsEvaluating(true);
+    setEvaluationScore(null);
+    clearMessages();
+    setEvaluationProgress({ current: 0, total: 4 });
+
+    try {
+      const response = await runEvaluation(documentSet, strategy);
+      const { queries, score } = response.results;
+
+      // Add each query result as a message pair with delay for natural feel
+      for (let i = 0; i < queries.length; i++) {
+        const query = queries[i];
+        setEvaluationProgress({ current: i + 1, total: queries.length });
+
+        const scoring: ScoringData = {
+          isCorrect: query.is_correct,
+          foundTerms: query.found_terms,
+          missingTerms: query.missing_terms,
+          prohibitedFound: query.prohibited_found,
+          explanation: query.explanation,
+        };
+
+        addEvaluationMessage(query.question, query.answer, scoring);
+
+        // Small delay between messages for visual effect
+        if (i < queries.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+      }
+
+      setEvaluationScore(score);
+    } catch (err) {
+      console.error("Evaluation failed:", err);
+    } finally {
+      setIsEvaluating(false);
+      setEvaluationProgress({ current: 0, total: 0 });
+    }
+  }, [isEvaluating, isLoading, documentSet, strategy, clearMessages, addEvaluationMessage]);
+
   const allDocuments = [...sampleDocuments, ...uploadedDocuments];
   const hasSampleDocs = sampleDocuments.length > 0;
 
@@ -84,7 +145,11 @@ export function ChatInterface() {
       {/* Server starting overlay */}
       <ServerStartingOverlay isVisible={isStarting} />
 
-      <div className="flex flex-col h-screen bg-linear-to-br from-slate-50 via-white to-blue-50/30">
+      <div className={`flex flex-col h-screen transition-all duration-500 ${
+          documentSet === "optimized"
+            ? "bg-linear-to-br from-emerald-50/50 via-white to-green-50/30"
+            : "bg-linear-to-br from-slate-50 via-white to-blue-50/30"
+        }`}>
         {/* Header - Premium glass morphism style */}
         <header className="shrink-0 glass border-b border-white/20 shadow-sm sticky top-0 z-30">
           <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -96,46 +161,79 @@ export function ChatInterface() {
                 {UI_TEXT.appSubtitle}
               </p>
             </div>
-            <button
-              ref={documentButtonRef}
-              onClick={() => setIsDrawerOpen(true)}
-              className={`group flex items-center gap-2.5 px-5 py-2.5 text-sm font-medium
-                       text-gray-700 bg-white/80 rounded-xl border border-gray-200/60
-                       hover:bg-white hover:border-gray-300 hover:shadow-lg
-                       active:scale-[0.98] transition-all duration-200
-                       ${showOnboarding ? "animate-pulse-glow" : ""}`}
-            >
-              <svg
-                className="w-5 h-5 text-gray-500 group-hover:text-blue-600 transition-colors"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+            <div className="flex items-center gap-3">
+              {/* Evaluation button */}
+              <button
+                onClick={handleRunEvaluation}
+                disabled={isEvaluating || isLoading || !isReady}
+                className={`group flex items-center gap-2 px-4 py-2.5 text-sm font-medium
+                         rounded-xl border transition-all duration-200
+                         ${isEvaluating
+                           ? "bg-blue-50 border-blue-200 text-blue-700"
+                           : "text-gray-700 bg-white/80 border-gray-200/60 hover:bg-white hover:border-blue-300 hover:shadow-lg active:scale-[0.98]"
+                         }
+                         disabled:opacity-50 disabled:cursor-not-allowed`}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-              <span className="group-hover:text-gray-900 transition-colors">
-                {UI_TEXT.openDocuments}
-              </span>
-              {/* Document count badge */}
-              {totalDocuments > 0 && (
-                <span className="ml-1 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full">
-                  {totalDocuments}
+                {isEvaluating ? (
+                  <>
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    <span>テスト中 {evaluationProgress.current}/{evaluationProgress.total}</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 text-gray-500 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <span>精度テスト</span>
+                  </>
+                )}
+              </button>
+
+              {/* Document button */}
+              <button
+                ref={documentButtonRef}
+                onClick={() => setIsDrawerOpen(true)}
+                className={`group flex items-center gap-2.5 px-5 py-2.5 text-sm font-medium
+                         text-gray-700 bg-white/80 rounded-xl border border-gray-200/60
+                         hover:bg-white hover:border-gray-300 hover:shadow-lg
+                         active:scale-[0.98] transition-all duration-200
+                         ${showOnboarding ? "animate-pulse-glow" : ""}`}
+              >
+                <svg
+                  className="w-5 h-5 text-gray-500 group-hover:text-blue-600 transition-colors"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                <span className="group-hover:text-gray-900 transition-colors">
+                  {UI_TEXT.openDocuments}
                 </span>
-              )}
-            </button>
+                {/* Document count badge */}
+                {totalDocuments > 0 && (
+                  <span className="ml-1 px-2 py-0.5 text-xs font-semibold bg-blue-100 text-blue-700 rounded-full">
+                    {totalDocuments}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
         </header>
 
-        {/* Strategy selector bar */}
-        <StrategySelector
+        {/* Dataset selector bar */}
+        <DatasetSelector
           documentSet={documentSet}
           strategy={strategy}
-          onDocumentSetChange={setDocumentSet}
+          onDocumentSetChange={handleDocumentSetChange}
           onStrategyChange={setStrategy}
           disabled={isLoading}
         />
@@ -284,8 +382,17 @@ export function ChatInterface() {
           </div>
         </main>
 
+        {/* Evaluation summary - show after evaluation completes */}
+        {evaluationScore && (
+          <EvaluationSummary
+            correct={evaluationScore.correct}
+            total={evaluationScore.total}
+            datasetName={documentSet === "optimized" ? "最適化済み" : "元データ"}
+          />
+        )}
+
         {/* Input area */}
-        <ChatInput ref={chatInputRef} onSend={handleSendMessage} disabled={isLoading || !isReady} />
+        <ChatInput ref={chatInputRef} onSend={handleSendMessage} disabled={isLoading || isEvaluating || !isReady} />
 
         {/* Document drawer */}
         <DocumentDrawer

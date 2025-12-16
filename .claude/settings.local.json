@@ -5,7 +5,8 @@
       "Bash(npx tsc:*)",
       "Bash(cat:*)",
       "Bash(dir:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(uv run pyright:*)"
     ],
     "deny": [],
     "ask": []
