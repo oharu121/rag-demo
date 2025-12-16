@@ -34,7 +34,7 @@ export function ChunkViewer({ chunks, documentSet, strategy }: ChunkViewerProps)
       {/* Header - always visible */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-gradient-to-r from-slate-50 to-blue-50/50
+        className="w-full flex items-center justify-between px-4 py-3 bg-linear-to-r from-slate-50 to-blue-50/50
                  hover:from-slate-100 hover:to-blue-100/50 transition-colors"
       >
         <div className="flex items-center gap-2">

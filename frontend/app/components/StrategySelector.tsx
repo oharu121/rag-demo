@@ -49,7 +49,7 @@ export function StrategySelector({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-gradient-to-r from-slate-50 to-blue-50/30 border-b border-gray-200/60">
+    <div className="flex flex-wrap items-center gap-3 px-4 py-3 bg-linear-to-r from-slate-50 to-blue-50/30 border-b border-gray-200/60">
       {/* Document Set Selector */}
       <div className="flex items-center gap-2">
         <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
