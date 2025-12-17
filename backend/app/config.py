@@ -35,19 +35,23 @@ CHUNKING_CONFIGS = {
 }
 
 
+# Base directory (computed once at module load)
+_BASE_DIR = Path(__file__).parent
+
+
 class Settings(BaseSettings):
     """アプリケーション設定"""
 
     # API Keys
     google_api_key: str = ""
 
-    # Paths
-    base_dir: Path = Path(__file__).parent
-    documents_dir: Path = base_dir / "data" / "regulations"  # Changed to regulations
-    documents_dir_optimized: Path = base_dir / "data" / "regulations-optimized"
-    uploads_dir: Path = base_dir / "data" / "uploads"
-    chroma_db_dir: Path = base_dir.parent / "chroma_db"
-    evaluation_queries_path: Path = base_dir / "data" / "evaluation" / "test_queries_light.json"
+    # Paths - use the module-level constant
+    base_dir: Path = _BASE_DIR
+    documents_dir: Path = _BASE_DIR / "data" / "regulations"
+    documents_dir_optimized: Path = _BASE_DIR / "data" / "regulations-optimized"
+    uploads_dir: Path = _BASE_DIR / "data" / "uploads"
+    chroma_db_dir: Path = _BASE_DIR.parent / "chroma_db"
+    evaluation_queries_path: Path = _BASE_DIR / "data" / "evaluation" / "test_queries_light.json"
 
     # Embedding Model - Better Japanese support
     embedding_model: str = "intfloat/multilingual-e5-large"
