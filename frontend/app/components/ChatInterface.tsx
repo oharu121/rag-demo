@@ -23,8 +23,6 @@ import type { ChatInputRef } from "./ChatInput";
 export function ChatInterface() {
   const { messages, isLoading, error, sendMessage, clearMessages, clearError, addEvaluationMessage, setIsLoading } = useChat();
   const { isReady, isStarting } = useServerStatus();
-  const documentsHook = useDocuments();
-  const { sampleDocuments, uploadedDocuments } = documentsHook;
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
   const [showPreviewHint, setShowPreviewHint] = useState(false);
@@ -33,6 +31,9 @@ export function ChatInterface() {
   const [rebuildButtonRef, setRebuildButtonRef] = useState<HTMLButtonElement | null>(null);
   const [documentSet, setDocumentSet] = useState<DocumentSet>("original");
   const [strategy, setStrategy] = useState<ChunkingStrategy>("standard");
+  // Pass documentSet to useDocuments so it fetches the correct document list
+  const documentsHook = useDocuments(documentSet);
+  const { sampleDocuments, uploadedDocuments } = documentsHook;
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evaluationProgress, setEvaluationProgress] = useState({ current: 0, total: 0 });
   const [evaluationScore, setEvaluationScore] = useState<EvaluationScore | null>(null);
