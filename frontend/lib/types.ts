@@ -171,3 +171,47 @@ export interface OptionsResponse {
     document_set: string;
   };
 }
+
+// Evaluation types
+export interface ScoringData {
+  isCorrect: boolean;
+  foundTerms: string[];
+  missingTerms: string[];
+  prohibitedFound: string[];
+  explanation: string;
+}
+
+export interface EvaluationQueryResult {
+  id: string;
+  category: string;
+  question: string;
+  answer: string;
+  is_correct: boolean;
+  found_terms: string[];
+  missing_terms: string[];
+  prohibited_found: string[];
+  explanation: string;
+}
+
+export interface EvaluationScore {
+  correct: number;
+  total: number;
+  percentage: number;
+}
+
+export interface EvaluationDatasetResult {
+  queries: EvaluationQueryResult[];
+  score: EvaluationScore;
+}
+
+export interface EvaluationResponse {
+  status: string;
+  document_set: string;
+  results: EvaluationDatasetResult;
+}
+
+export interface TestQuery {
+  id: string;
+  category: string;
+  question: string;
+}

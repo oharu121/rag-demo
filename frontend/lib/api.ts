@@ -10,12 +10,14 @@ import type {
   DocumentListResponse,
   DocumentSet,
   DocumentUploadResponse,
+  EvaluationResponse,
   HealthResponse,
   Message,
   OptionsResponse,
   RebuildResponse,
   Source,
   SSEEvent,
+  TestQuery,
 } from "./types";
 
 const { baseUrl, endpoints } = API_CONFIG;
@@ -214,6 +216,36 @@ export async function fetchOptions(): Promise<OptionsResponse> {
   const response = await fetch(`${baseUrl}${endpoints.documents}/options`);
   if (!response.ok) {
     throw new Error("Failed to fetch options");
+  }
+  return response.json();
+}
+
+/**
+ * テストクエリ一覧を取得
+ */
+export async function fetchTestQueries(): Promise<TestQuery[]> {
+  const response = await fetch(`${baseUrl}/evaluate/queries`);
+  if (!response.ok) {
+    throw new Error("Failed to fetch test queries");
+  }
+  const data = await response.json();
+  return data.queries;
+}
+
+/**
+ * 精度テストを実行
+ */
+export async function runEvaluation(
+  documentSet: DocumentSet,
+  strategy: ChunkingStrategy
+): Promise<EvaluationResponse> {
+  const response = await fetch(
+    `${baseUrl}/evaluate/quick?document_set=${documentSet}&strategy=${strategy}`,
+    { method: "POST" }
+  );
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || "Evaluation failed");
   }
   return response.json();
 }

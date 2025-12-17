@@ -1,0 +1,48 @@
+{
+  "metadata": {
+    "description": "Light test suite for quick RAG accuracy evaluation",
+    "created": "2024-12-16",
+    "purpose": "4 queries for demo - 2 general (baseline) + 2 exception (key differentiator)"
+  },
+  "queries": [
+    {
+      "id": "general_02",
+      "category": "general",
+      "topic": "通勤手当",
+      "question": "通勤手当の上限額はいくらですか？",
+      "expected_answer_contains": ["50,000円", "5万円"],
+      "source_file": "通勤手当規程.md",
+      "difficulty": "easy"
+    },
+    {
+      "id": "general_03",
+      "category": "general",
+      "topic": "休暇",
+      "question": "年次有給休暇は入社後どのくらいで付与されますか？",
+      "expected_answer_contains": ["6ヶ月", "10日"],
+      "source_file": "休暇規程.md",
+      "difficulty": "easy"
+    },
+    {
+      "id": "exception_02",
+      "category": "exception",
+      "topic": "通勤手当",
+      "question": "アルバイトの通勤手当の上限額はいくらですか？",
+      "expected_answer_contains": ["20,000円", "2万円"],
+      "expected_answer_must_not_contain": ["50,000円", "5万円"],
+      "source_file": "通勤手当規程.md",
+      "difficulty": "hard",
+      "notes": "Exception: 20,000 vs regular 50,000"
+    },
+    {
+      "id": "exception_03",
+      "category": "exception",
+      "topic": "休暇",
+      "question": "アルバイトは結婚休暇を取得できますか？",
+      "expected_answer_contains": ["付与しない", "認められない", "対象外", "できない", "取得できません"],
+      "source_file": "休暇規程.md",
+      "difficulty": "hard",
+      "notes": "Exception: アルバイトは結婚休暇対象外"
+    }
+  ]
+}

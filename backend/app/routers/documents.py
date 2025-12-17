@@ -2,10 +2,11 @@
 ドキュメント管理ルーター
 """
 
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import APIRouter, UploadFile, File, HTTPException, Query
 
 from typing import Literal
 
+from app.config import DocumentSet
 from app.models.schemas import (
     DocumentListResponse,
     DocumentInfo,
@@ -54,10 +55,17 @@ async def debug_test_content(doc_id: str):
 
 
 @router.get("", response_model=DocumentListResponse)
-async def list_documents() -> DocumentListResponse:
+async def list_documents(
+    document_set: str = Query("original", description="Document set to list: 'original' or 'optimized'")
+) -> DocumentListResponse:
     """全てのドキュメント一覧を取得"""
     doc_service = get_document_service()
-    documents = doc_service.list_documents()
+    # Convert string to enum
+    try:
+        doc_set_enum = DocumentSet(document_set)
+    except ValueError:
+        doc_set_enum = DocumentSet.ORIGINAL
+    documents = doc_service.list_documents(document_set=doc_set_enum)
 
     return DocumentListResponse(
         documents=[

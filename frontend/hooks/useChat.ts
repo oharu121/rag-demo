@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import type { Message, Source, SSEEvent, ChunkInfo, ChunkingStrategy, DocumentSet } from "@/lib/types";
+import type { Message, Source, SSEEvent, ChunkInfo, ChunkingStrategy, DocumentSet, ScoringData } from "@/lib/types";
 import { streamChat, parseSourcesFromAPI } from "@/lib/api";
 import { UI_TEXT, ERROR_CODE_MESSAGES } from "@/lib/constants";
 
@@ -16,6 +16,7 @@ export interface MessageWithChunks extends Message {
     documentSet: string;
     strategy: string;
   };
+  scoring?: ScoringData;
 }
 
 function generateId(): string {
@@ -171,6 +172,27 @@ export function useChat() {
     setError(null);
   }, []);
 
+  // Add a message pair with scoring (for evaluation mode)
+  const addEvaluationMessage = useCallback(
+    (question: string, answer: string, scoring: ScoringData) => {
+      const userMessage: MessageWithChunks = {
+        id: generateId(),
+        role: "user",
+        content: question,
+        timestamp: new Date(),
+      };
+      const assistantMessage: MessageWithChunks = {
+        id: generateId(),
+        role: "assistant",
+        content: answer,
+        timestamp: new Date(),
+        scoring,
+      };
+      setMessages((prev) => [...prev, userMessage, assistantMessage]);
+    },
+    []
+  );
+
   return {
     messages,
     isLoading,
@@ -178,5 +200,7 @@ export function useChat() {
     sendMessage,
     clearMessages,
     clearError,
+    addEvaluationMessage,
+    setIsLoading: setIsLoading,
   };
 }

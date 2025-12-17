@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import get_settings
-from app.routers import chat, documents, health
+from app.routers import chat, documents, evaluation, health
 from app.services.rag_service import get_rag_service
 from app.utils.errors import RAGException
 
@@ -104,6 +104,7 @@ async def general_exception_handler(request: Request, exc: Exception):
 app.include_router(health.router, prefix="/api")
 app.include_router(chat.router, prefix="/api")
 app.include_router(documents.router, prefix="/api")
+app.include_router(evaluation.router, prefix="/api")
 
 
 # ルートエンドポイント
