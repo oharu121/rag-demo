@@ -228,7 +228,7 @@ export async function fetchOptions(): Promise<OptionsResponse> {
  * テストクエリ一覧を取得
  */
 export async function fetchTestQueries(): Promise<TestQuery[]> {
-  const response = await fetch(`${baseUrl}/evaluate/queries`);
+  const response = await fetch(`${baseUrl}/api/evaluate/queries`);
   if (!response.ok) {
     throw new Error("Failed to fetch test queries");
   }
@@ -244,7 +244,7 @@ export async function runEvaluation(
   strategy: ChunkingStrategy
 ): Promise<EvaluationResponse> {
   const response = await fetch(
-    `${baseUrl}/evaluate/quick?document_set=${documentSet}&strategy=${strategy}`,
+    `${baseUrl}/api/evaluate/quick?document_set=${documentSet}&strategy=${strategy}`,
     { method: "POST" }
   );
   if (!response.ok) {

@@ -3,13 +3,12 @@
 """
 
 import json
-from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app.config import DocumentSet, ChunkingStrategy
+from app.config import DocumentSet, ChunkingStrategy, get_settings
 from app.services.rag_service import get_rag_service
 
 
@@ -19,7 +18,9 @@ router = APIRouter(prefix="/evaluate", tags=["evaluation"])
 # Load light test queries
 def load_test_queries() -> list[dict]:
     """Load test queries from JSON file."""
-    queries_path = Path(__file__).parent.parent.parent.parent / "evaluation" / "test_queries_light.json"
+    settings = get_settings()
+    queries_path = settings.evaluation_queries_path
+
     if not queries_path.exists():
         raise FileNotFoundError(f"Test queries file not found: {queries_path}")
 

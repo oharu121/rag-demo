@@ -91,6 +91,6 @@ backend/app/data/uploads/*
 backend/app/data/vectorstore/
 
 # Evaluation results
-evaluation/results/
+backend/app/data/evaluation/results/
 
 nul

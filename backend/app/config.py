@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     documents_dir_optimized: Path = base_dir / "data" / "regulations-optimized"
     uploads_dir: Path = base_dir / "data" / "uploads"
     chroma_db_dir: Path = base_dir.parent / "chroma_db"
+    evaluation_queries_path: Path = base_dir / "data" / "evaluation" / "test_queries_light.json"
 
     # Embedding Model - Better Japanese support
     embedding_model: str = "intfloat/multilingual-e5-large"
