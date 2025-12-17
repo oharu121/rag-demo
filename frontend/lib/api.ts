@@ -36,8 +36,12 @@ export async function checkHealth(): Promise<HealthResponse> {
 /**
  * ドキュメント一覧を取得
  */
-export async function fetchDocuments(): Promise<Document[]> {
-  const response = await fetch(`${baseUrl}${endpoints.documents}`);
+export async function fetchDocuments(
+  documentSet: DocumentSet = "original"
+): Promise<Document[]> {
+  const response = await fetch(
+    `${baseUrl}${endpoints.documents}?document_set=${documentSet}`
+  );
   if (!response.ok) {
     throw new Error("Failed to fetch documents");
   }

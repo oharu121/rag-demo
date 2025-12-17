@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import type { Document } from "@/lib/types";
+import type { Document, DocumentSet } from "@/lib/types";
 import {
   fetchDocuments,
   uploadDocument,
@@ -10,7 +10,7 @@ import {
 } from "@/lib/api";
 import { UI_TEXT, UPLOAD_CONFIG } from "@/lib/constants";
 
-export function useDocuments() {
+export function useDocuments(documentSet: DocumentSet = "original") {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -21,14 +21,14 @@ export function useDocuments() {
     setIsLoading(true);
     setError(null);
     try {
-      const docs = await fetchDocuments();
+      const docs = await fetchDocuments(documentSet);
       setDocuments(docs);
     } catch (err) {
       setError(err instanceof Error ? err.message : UI_TEXT.networkError);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [documentSet]);
 
   const upload = useCallback(async (file: File) => {
     // Validate file
