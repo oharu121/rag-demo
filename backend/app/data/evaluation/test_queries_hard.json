@@ -1,39 +1,39 @@
 {
   "metadata": {
-    "description": "Hard test suite - exception cases only",
+    "description": "Hard test suite - realistic RAG challenge scenarios",
     "created": "2024-12-18",
-    "purpose": "10 exception queries to differentiate data quality - tests edge cases like part-timer rules, specific limits, and prohibited actions"
+    "updated": "2024-12-18",
+    "purpose": "Tests RAG against realistic enterprise document patterns: implicit exceptions, multi-hop reasoning, negation understanding, etc."
   },
   "queries": [
     {
-      "id": "exception_01",
-      "category": "exception",
+      "id": "implicit_01",
+      "category": "implicit_exception",
       "topic": "通勤手当",
       "question": "アルバイトの通勤手当の申請方法を教えてください。",
       "expected_answer_contains": [
-        "紙",
-        "通勤届（短期雇用者用）",
+        "届出書",
         "店舗責任者"
       ],
       "expected_answer_must_not_contain": ["HR Portal", "オンラインシステム"],
       "source_file": "通勤手当規程.md",
       "difficulty": "hard",
-      "notes": "Exception in 附則第3条 - different from regular employee process"
+      "notes": "Exception buried in 第11条（届出の特例）using '第2条の2に定める短期雇用者' instead of 'アルバイト'"
     },
     {
-      "id": "exception_02",
-      "category": "exception",
+      "id": "implicit_02",
+      "category": "implicit_exception",
       "topic": "通勤手当",
       "question": "アルバイトの通勤手当の上限額はいくらですか？",
       "expected_answer_contains": ["20,000円", "2万円"],
       "expected_answer_must_not_contain": ["50,000円", "5万円"],
       "source_file": "通勤手当規程.md",
       "difficulty": "hard",
-      "notes": "Exception: 20,000 vs regular 50,000"
+      "notes": "Exception in 第12条（支給額の特例）- uses '第2条の2に定める者'"
     },
     {
-      "id": "exception_03",
-      "category": "exception",
+      "id": "implicit_03",
+      "category": "implicit_exception",
       "topic": "休暇",
       "question": "アルバイトは結婚休暇を取得できますか？",
       "expected_answer_contains": [
@@ -43,109 +43,183 @@
         "できない",
         "取得できません",
         "付与されません",
-        "認められていません"
-      ],
-      "source_file": "休暇規程.md",
-      "difficulty": "hard",
-      "notes": "Exception: アルバイトは結婚休暇対象外"
-    },
-    {
-      "id": "exception_04",
-      "category": "exception",
-      "topic": "休暇",
-      "question": "パートタイム従業員は時間単位で有給休暇を取得できますか？",
-      "expected_answer_contains": [
-        "認められない",
-        "できない",
-        "対象外",
         "認められていません",
-        "できません",
-        "取得できません",
-        "適用されません",
-        "許可されていません"
+        "ありません"
       ],
       "source_file": "休暇規程.md",
       "difficulty": "hard",
-      "notes": "Exception: パートは時間単位取得不可"
+      "notes": "Exception in 第15条（特別休暇の特例）- uses '第2条の2に定める者'"
     },
     {
-      "id": "exception_05",
-      "category": "exception",
+      "id": "implicit_04",
+      "category": "implicit_exception",
       "topic": "経費",
-      "question": "アルバイトが経費精算できるものは何ですか？",
-      "expected_answer_contains": ["交通費", "のみ"],
-      "expected_answer_must_not_contain": ["接待交際費", "出張"],
+      "question": "アルバイトが経費精算できる項目を教えてください。",
+      "expected_answer_contains": ["交通費"],
+      "expected_answer_must_not_contain": ["接待交際費", "出張", "消耗品"],
       "source_file": "経費精算規程.md",
       "difficulty": "hard",
-      "notes": "Exception: アルバイトは交通費のみ"
+      "notes": "Exception in 第17条（精算対象経費の特例）- uses '第2条の2に定める者'"
     },
     {
-      "id": "exception_06",
-      "category": "exception",
-      "topic": "経費",
-      "question": "パートタイム従業員の経費精算はどのように行いますか？",
-      "expected_answer_contains": [
-        "紙",
-        "店舗責任者",
-        "現金"
-      ],
-      "expected_answer_must_not_contain": ["オンラインシステム"],
-      "source_file": "経費精算規程.md",
-      "difficulty": "hard",
-      "notes": "Exception: パートは紙申請、現金支給"
-    },
-    {
-      "id": "exception_07",
-      "category": "exception",
+      "id": "implicit_05",
+      "category": "implicit_exception",
       "topic": "リモートワーク",
-      "question": "アルバイトはリモートワークができますか？",
+      "question": "アルバイトはリモートワークできますか？",
       "expected_answer_contains": [
         "原則",
         "認めない",
-        "条件",
         "できません",
-        "認められていません",
         "不可"
       ],
       "source_file": "リモートワーク規程.md",
       "difficulty": "hard",
-      "notes": "Exception: 原則不可、条件付きで可能"
+      "notes": "Exception in 第19条（対象外）- uses '第2条の2に定める者'"
     },
     {
-      "id": "exception_08",
-      "category": "exception",
-      "topic": "リモートワーク",
-      "question": "アルバイトがリモートワークする場合、通信費は支給されますか？",
+      "id": "multihop_01",
+      "category": "multi_hop",
+      "topic": "福利厚生",
+      "question": "正社員とアルバイトの結婚祝金の差額はいくらですか？",
+      "expected_answer_contains": ["20,000円", "2万円"],
+      "source_file": "福利厚生規程.md",
+      "difficulty": "very_hard",
+      "notes": "Requires: (1) Find 正社員=30,000円 in 第6条 (2) Find アルバイト=10,000円 in 第18条 (3) Calculate difference"
+    },
+    {
+      "id": "multihop_02",
+      "category": "multi_hop",
+      "topic": "通勤手当",
+      "question": "正社員とアルバイトの通勤手当の上限額の差額を教えてください。",
+      "expected_answer_contains": ["30,000円", "3万円"],
+      "source_file": "通勤手当規程.md",
+      "difficulty": "very_hard",
+      "notes": "Requires: (1) Find 正社員=50,000円 in 第3条 (2) Find アルバイト=20,000円 in 第12条 (3) Calculate difference"
+    },
+    {
+      "id": "negation_01",
+      "category": "negation",
+      "topic": "福利厚生",
+      "question": "アルバイトが利用できない福利厚生制度を教えてください。",
       "expected_answer_contains": [
-        "支給しない",
+        "社員持株会",
+        "社員旅行",
+        "レクリエーション",
+        "資格取得支援",
+        "健康増進",
+        "育児・介護支援"
+      ],
+      "source_file": "福利厚生規程.md",
+      "difficulty": "very_hard",
+      "notes": "Requires understanding of what is NOT available - scattered across 第20-23条"
+    },
+    {
+      "id": "negation_02",
+      "category": "negation",
+      "topic": "経費",
+      "question": "アルバイトが経費精算できない項目は何ですか？",
+      "expected_answer_contains": [
+        "消耗品",
+        "接待交際費",
+        "出張旅費"
+      ],
+      "source_file": "経費精算規程.md",
+      "difficulty": "very_hard",
+      "notes": "Requires understanding negation in 第17条"
+    },
+    {
+      "id": "conditional_01",
+      "category": "conditional",
+      "topic": "福利厚生",
+      "question": "勤続6ヶ月のアルバイトは結婚祝金をもらえますか？",
+      "expected_answer_contains": [
+        "もらえません",
         "対象外",
+        "1年以上",
         "支給されません",
-        "ありません"
+        "条件を満たさない"
+      ],
+      "source_file": "福利厚生規程.md",
+      "difficulty": "very_hard",
+      "notes": "Requires checking condition '勤続1年以上の者に限る' in 第18条"
+    },
+    {
+      "id": "conditional_02",
+      "category": "conditional",
+      "topic": "リモートワーク",
+      "question": "入社8ヶ月のアルバイトはリモートワークできますか？",
+      "expected_answer_contains": [
+        "できません",
+        "1年以上",
+        "対象外",
+        "条件を満たさない"
       ],
       "source_file": "リモートワーク規程.md",
-      "difficulty": "hard",
-      "notes": "Exception: アルバイトは通信費・手当なし"
+      "difficulty": "very_hard",
+      "notes": "Requires checking condition '入社後1年以上経過' in 第19条"
     },
     {
-      "id": "exception_09",
-      "category": "exception",
+      "id": "not_in_docs_01",
+      "category": "not_in_documents",
       "topic": "福利厚生",
-      "question": "アルバイトの結婚祝金はいくらですか？",
-      "expected_answer_contains": ["10,000円", "1万円", "勤続1年以上"],
-      "expected_answer_must_not_contain": ["30,000円", "3万円"],
-      "source_file": "福利厚生規程.md",
-      "difficulty": "hard",
-      "notes": "Exception: 10,000 vs regular 30,000"
+      "question": "アルバイトの退職金はいくらですか？",
+      "expected_answer_contains": [
+        "規定なし",
+        "記載なし",
+        "定めがない",
+        "見つからない",
+        "情報がない",
+        "わかりません"
+      ],
+      "source_file": null,
+      "difficulty": "very_hard",
+      "notes": "No retirement benefit mentioned for any employee type - should not hallucinate"
     },
     {
-      "id": "exception_10",
-      "category": "exception",
-      "topic": "服務",
-      "question": "アルバイトの健康診断の対象条件を教えてください。",
-      "expected_answer_contains": ["週20時間以上", "1年以上"],
-      "source_file": "服務規程.md",
-      "difficulty": "hard",
-      "notes": "Exception: specific conditions for アルバイト health check"
+      "id": "not_in_docs_02",
+      "category": "not_in_documents",
+      "topic": "給与",
+      "question": "アルバイトのボーナス支給額を教えてください。",
+      "expected_answer_contains": [
+        "規定なし",
+        "記載なし",
+        "定めがない",
+        "見つからない",
+        "情報がない",
+        "わかりません"
+      ],
+      "source_file": null,
+      "difficulty": "very_hard",
+      "notes": "No bonus information in regulations - should not hallucinate"
+    },
+    {
+      "id": "cross_doc_01",
+      "category": "cross_document",
+      "topic": "申請方法",
+      "question": "アルバイトの各種届出は全て紙で行う必要がありますか？",
+      "expected_answer_contains": [
+        "紙",
+        "店舗責任者"
+      ],
+      "expected_answer_must_not_contain": ["HR Portal", "オンラインシステム"],
+      "source_file": "multiple",
+      "difficulty": "very_hard",
+      "notes": "Requires cross-referencing multiple regulations to confirm paper-based process"
+    },
+    {
+      "id": "cross_doc_02",
+      "category": "cross_document",
+      "topic": "経費・福利厚生",
+      "question": "アルバイトが会社から金銭的支援を受けられる項目を全て教えてください。",
+      "expected_answer_contains": [
+        "通勤手当",
+        "交通費",
+        "結婚祝金",
+        "弔慰金"
+      ],
+      "source_file": "multiple",
+      "difficulty": "very_hard",
+      "notes": "Requires aggregating from 通勤手当規程, 経費精算規程, 福利厚生規程"
     }
   ]
 }
