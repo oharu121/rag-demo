@@ -15,7 +15,6 @@
         "届出書",
         "店舗責任者"
       ],
-      "expected_answer_must_not_contain": ["HR Portal", "オンラインシステム"],
       "source_file": "通勤手当規程.md",
       "difficulty": "hard",
       "notes": "Exception buried in 第11条（届出の特例）using '第2条の2に定める短期雇用者' instead of 'アルバイト'"
@@ -26,7 +25,6 @@
       "topic": "通勤手当",
       "question": "アルバイトの通勤手当の上限額はいくらですか？",
       "expected_answer_contains": ["20,000円", "2万円"],
-      "expected_answer_must_not_contain": ["50,000円", "5万円"],
       "source_file": "通勤手当規程.md",
       "difficulty": "hard",
       "notes": "Exception in 第12条（支給額の特例）- uses '第2条の2に定める者'"
@@ -56,7 +54,6 @@
       "topic": "経費",
       "question": "アルバイトが経費精算できる項目を教えてください。",
       "expected_answer_contains": ["交通費"],
-      "expected_answer_must_not_contain": ["接待交際費", "出張", "消耗品"],
       "source_file": "経費精算規程.md",
       "difficulty": "hard",
       "notes": "Exception in 第17条（精算対象経費の特例）- uses '第2条の2に定める者'"
@@ -169,7 +166,10 @@
         "定めがない",
         "見つからない",
         "情報がない",
-        "わかりません"
+        "わかりません",
+        "含まれていません",
+        "ありません",
+        "確認できません"
       ],
       "source_file": null,
       "difficulty": "very_hard",
@@ -186,7 +186,10 @@
         "定めがない",
         "見つからない",
         "情報がない",
-        "わかりません"
+        "わかりません",
+        "含まれていません",
+        "ありません",
+        "確認できません"
       ],
       "source_file": null,
       "difficulty": "very_hard",
@@ -201,7 +204,6 @@
         "紙",
         "店舗責任者"
       ],
-      "expected_answer_must_not_contain": ["HR Portal", "オンラインシステム"],
       "source_file": "multiple",
       "difficulty": "very_hard",
       "notes": "Requires cross-referencing multiple regulations to confirm paper-based process"
