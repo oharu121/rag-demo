@@ -2,10 +2,13 @@
 評価ルーター - RAG精度テスト用API
 """
 
+import asyncio
 import json
+import logging
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from app.config import DocumentSet, ChunkingStrategy, get_settings
@@ -13,6 +16,10 @@ from app.services.rag_service import get_rag_service
 
 
 router = APIRouter(prefix="/evaluate", tags=["evaluation"])
+
+# Set up logging for evaluation
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 # Load light test queries
@@ -154,6 +161,7 @@ async def run_quick_evaluation(
         correct_count = 0
 
         for query in test_queries:
+            logger.info(f"[Evaluation] Processing: {query['id']} - {query['question'][:30]}...")
             print(f"[Evaluation] Processing: {query['id']} - {query['question'][:30]}...", flush=True)
 
             try:
@@ -164,6 +172,11 @@ async def run_quick_evaluation(
                     strategy=strategy,
                 )
                 answer = result.get("answer", "")
+
+                # Log full answer for debugging
+                logger.info(f"[Evaluation] Q: {query['question']}")
+                logger.info(f"[Evaluation] A: {answer[:300]}...")
+                print(f"[Evaluation] Answer preview: {answer[:200]}...", flush=True)
 
                 # Check answer quality
                 scoring = check_answer_quality(
@@ -188,6 +201,7 @@ async def run_quick_evaluation(
                 ))
 
                 status = "✓" if scoring["is_correct"] else "✗"
+                logger.info(f"[Evaluation] {status} {scoring['explanation']} | found={scoring['found_terms']} | prohibited={scoring['prohibited_found']}")
                 print(f"[Evaluation]   {status} {scoring['explanation']}", flush=True)
 
             except Exception as e:
@@ -245,3 +259,143 @@ async def get_test_queries():
         }
     except FileNotFoundError as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/stream")
+async def stream_evaluation(
+    document_set: str = "original",
+    strategy: str = "standard"
+):
+    """
+    Stream evaluation results with token-by-token answer streaming.
+
+    SSE Event types:
+    - query_start: {id, category, question, index, total}
+    - token: {token}
+    - query_done: {id, answer, scoring: {is_correct, found_terms, missing_terms, prohibited_found, explanation}}
+    - complete: {score: {correct, total, percentage}}
+    - error: {message}
+    """
+
+    async def generate():
+        try:
+            # Validate inputs
+            try:
+                doc_set_enum = DocumentSet(document_set)
+            except ValueError:
+                yield f"event: error\ndata: {json.dumps({'message': f'Invalid document_set: {document_set}'})}\n\n"
+                return
+
+            try:
+                strategy_enum = ChunkingStrategy(strategy)
+            except ValueError:
+                yield f"event: error\ndata: {json.dumps({'message': f'Invalid strategy: {strategy}'})}\n\n"
+                return
+
+            # Load test queries
+            test_queries = load_test_queries()
+            total = len(test_queries)
+
+            # Get RAG service
+            rag_service = get_rag_service()
+
+            correct_count = 0
+
+            for index, query in enumerate(test_queries):
+                query_id = query["id"]
+                question = query["question"]
+
+                # Send query_start event
+                yield f"event: query_start\ndata: {json.dumps({'id': query_id, 'category': query['category'], 'question': question, 'index': index, 'total': total})}\n\n"
+
+                try:
+                    # Stream the answer token by token
+                    full_answer = ""
+
+                    async for event in rag_service.stream_query(
+                        question=question,
+                        document_set=doc_set_enum,
+                        strategy=strategy_enum,
+                    ):
+                        if event["type"] == "token":
+                            token = event["data"]["token"]
+                            full_answer += token
+                            yield f"event: token\ndata: {json.dumps({'token': token})}\n\n"
+                        elif event["type"] == "error":
+                            yield f"event: error\ndata: {json.dumps(event['data'])}\n\n"
+                            return
+                        # Skip sources/chunks/done events - we only need tokens
+
+                    # Log answer for debugging
+                    logger.info(f"[Evaluation Stream] Q: {question}")
+                    logger.info(f"[Evaluation Stream] A: {full_answer[:300]}...")
+
+                    # Check answer quality
+                    scoring = check_answer_quality(
+                        full_answer,
+                        query["expected_answer_contains"],
+                        query.get("expected_answer_must_not_contain"),
+                    )
+
+                    if scoring["is_correct"]:
+                        correct_count += 1
+
+                    status = "✓" if scoring["is_correct"] else "✗"
+                    logger.info(f"[Evaluation Stream] {status} {scoring['explanation']} | found={scoring['found_terms']} | prohibited={scoring['prohibited_found']}")
+
+                    # Send query_done event with scoring
+                    query_done_data = {
+                        "id": query_id,
+                        "answer": full_answer[:500] + "..." if len(full_answer) > 500 else full_answer,
+                        "scoring": {
+                            "is_correct": scoring["is_correct"],
+                            "found_terms": scoring["found_terms"],
+                            "missing_terms": scoring["missing_terms"],
+                            "prohibited_found": scoring["prohibited_found"],
+                            "explanation": scoring["explanation"],
+                        }
+                    }
+                    yield f"event: query_done\ndata: {json.dumps(query_done_data)}\n\n"
+
+                except Exception as e:
+                    logger.error(f"[Evaluation Stream] Error on query {query_id}: {e}")
+                    # Send error for this query but continue with others
+                    query_done_data = {
+                        "id": query_id,
+                        "answer": f"Error: {str(e)}",
+                        "scoring": {
+                            "is_correct": False,
+                            "found_terms": [],
+                            "missing_terms": query["expected_answer_contains"],
+                            "prohibited_found": [],
+                            "explanation": f"エラーが発生しました: {str(e)}",
+                        }
+                    }
+                    yield f"event: query_done\ndata: {json.dumps(query_done_data)}\n\n"
+
+            # Send complete event with final score
+            percentage = round(correct_count / total * 100, 1) if total > 0 else 0
+            complete_data = {
+                "score": {
+                    "correct": correct_count,
+                    "total": total,
+                    "percentage": percentage,
+                }
+            }
+            yield f"event: complete\ndata: {json.dumps(complete_data)}\n\n"
+
+        except FileNotFoundError as e:
+            yield f"event: error\ndata: {json.dumps({'message': str(e)})}\n\n"
+        except Exception as e:
+            logger.error(f"[Evaluation Stream] Unexpected error: {e}")
+            yield f"event: error\ndata: {json.dumps({'message': f'Evaluation failed: {str(e)}'})}\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

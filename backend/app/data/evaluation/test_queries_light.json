@@ -39,7 +39,14 @@
       "category": "exception",
       "topic": "休暇",
       "question": "アルバイトは結婚休暇を取得できますか？",
-      "expected_answer_contains": ["付与しない", "認められない", "対象外", "できない", "取得できません"],
+      "expected_answer_contains": [
+        "付与しない",
+        "認められない",
+        "対象外",
+        "できない",
+        "取得できません",
+        "付与されません"
+      ],
       "source_file": "休暇規程.md",
       "difficulty": "hard",
       "notes": "Exception: アルバイトは結婚休暇対象外"

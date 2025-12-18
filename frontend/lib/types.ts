@@ -215,3 +215,58 @@ export interface TestQuery {
   category: string;
   question: string;
 }
+
+// Evaluation streaming SSE event types
+export interface EvalSSEQueryStartEvent {
+  type: "query_start";
+  data: {
+    id: string;
+    category: string;
+    question: string;
+    index: number;
+    total: number;
+  };
+}
+
+export interface EvalSSETokenEvent {
+  type: "token";
+  data: { token: string };
+}
+
+export interface EvalSSEQueryDoneEvent {
+  type: "query_done";
+  data: {
+    id: string;
+    answer: string;
+    scoring: {
+      is_correct: boolean;
+      found_terms: string[];
+      missing_terms: string[];
+      prohibited_found: string[];
+      explanation: string;
+    };
+  };
+}
+
+export interface EvalSSECompleteEvent {
+  type: "complete";
+  data: {
+    score: {
+      correct: number;
+      total: number;
+      percentage: number;
+    };
+  };
+}
+
+export interface EvalSSEErrorEvent {
+  type: "error";
+  data: { message: string };
+}
+
+export type EvalSSEEvent =
+  | EvalSSEQueryStartEvent
+  | EvalSSETokenEvent
+  | EvalSSEQueryDoneEvent
+  | EvalSSECompleteEvent
+  | EvalSSEErrorEvent;

@@ -11,6 +11,7 @@ import type {
   DocumentSet,
   DocumentUploadResponse,
   EvaluationResponse,
+  EvalSSEEvent,
   HealthResponse,
   Message,
   OptionsResponse,
@@ -237,7 +238,7 @@ export async function fetchTestQueries(): Promise<TestQuery[]> {
 }
 
 /**
- * 精度テストを実行
+ * 精度テストを実行 (non-streaming, legacy)
  */
 export async function runEvaluation(
   documentSet: DocumentSet,
@@ -252,4 +253,60 @@ export async function runEvaluation(
     throw new Error(error.detail || "Evaluation failed");
   }
   return response.json();
+}
+
+/**
+ * 精度テストをストリーミングで実行
+ * - query_start: 質問開始
+ * - token: 回答トークン
+ * - query_done: 質問完了（スコア付き）
+ * - complete: 全テスト完了（最終スコア）
+ * - error: エラー
+ */
+export async function* streamEvaluation(
+  documentSet: DocumentSet,
+  strategy: ChunkingStrategy
+): AsyncGenerator<EvalSSEEvent, void, unknown> {
+  const response = await fetch(
+    `${baseUrl}/api/evaluate/stream?document_set=${documentSet}&strategy=${strategy}`
+  );
+
+  if (!response.ok) {
+    throw new Error("Evaluation stream request failed");
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error("No response body");
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+
+    // Process complete SSE events
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || ""; // Keep incomplete line in buffer
+
+    let currentEvent: string | null = null;
+
+    for (const line of lines) {
+      if (line.startsWith("event: ")) {
+        currentEvent = line.slice(7).trim();
+      } else if (line.startsWith("data: ") && currentEvent) {
+        try {
+          const data = JSON.parse(line.slice(6));
+          yield { type: currentEvent, data } as EvalSSEEvent;
+        } catch {
+          // Ignore parse errors
+        }
+        currentEvent = null;
+      }
+    }
+  }
 }

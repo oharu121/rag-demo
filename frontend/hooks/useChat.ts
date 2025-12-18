@@ -172,7 +172,7 @@ export function useChat() {
     setError(null);
   }, []);
 
-  // Add a message pair with scoring (for evaluation mode)
+  // Add a message pair with scoring (for evaluation mode - legacy non-streaming)
   const addEvaluationMessage = useCallback(
     (question: string, answer: string, scoring: ScoringData) => {
       const userMessage: MessageWithChunks = {
@@ -193,6 +193,57 @@ export function useChat() {
     []
   );
 
+  // Streaming evaluation methods
+  const currentStreamingIdRef = useRef<string | null>(null);
+
+  // Add user question and create streaming assistant placeholder
+  const startEvaluationQuestion = useCallback((question: string): string => {
+    const userMessage: MessageWithChunks = {
+      id: generateId(),
+      role: "user",
+      content: question,
+      timestamp: new Date(),
+    };
+    const assistantId = generateId();
+    const assistantMessage: MessageWithChunks = {
+      id: assistantId,
+      role: "assistant",
+      content: "",
+      timestamp: new Date(),
+      isStreaming: true,
+    };
+    currentStreamingIdRef.current = assistantId;
+    setMessages((prev) => [...prev, userMessage, assistantMessage]);
+    return assistantId;
+  }, []);
+
+  // Append token to current streaming message
+  const appendEvaluationToken = useCallback((token: string) => {
+    const targetId = currentStreamingIdRef.current;
+    if (!targetId) return;
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === targetId
+          ? { ...m, content: m.content + token }
+          : m
+      )
+    );
+  }, []);
+
+  // Complete current streaming message with scoring
+  const completeEvaluationQuestion = useCallback((scoring: ScoringData) => {
+    const targetId = currentStreamingIdRef.current;
+    if (!targetId) return;
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === targetId
+          ? { ...m, isStreaming: false, scoring }
+          : m
+      )
+    );
+    currentStreamingIdRef.current = null;
+  }, []);
+
   return {
     messages,
     isLoading,
@@ -201,6 +252,10 @@ export function useChat() {
     clearMessages,
     clearError,
     addEvaluationMessage,
-    setIsLoading: setIsLoading,
+    setIsLoading,
+    // Streaming evaluation methods
+    startEvaluationQuestion,
+    appendEvaluationToken,
+    completeEvaluationQuestion,
   };
 }

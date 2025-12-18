@@ -1,0 +1,107 @@
+{
+  "metadata": {
+    "description": "Medium test suite for RAG accuracy evaluation",
+    "created": "2024-12-18",
+    "purpose": "10 queries for balanced testing - 5 general (baseline) + 5 exception (key differentiator)"
+  },
+  "queries": [
+    {
+      "id": "general_01",
+      "category": "general",
+      "topic": "通勤手当",
+      "question": "正社員の通勤手当の申請方法を教えてください。",
+      "expected_answer_contains": ["HR Portal", "オンラインシステム", "通勤届"],
+      "source_file": "通勤手当規程.md",
+      "difficulty": "easy"
+    },
+    {
+      "id": "general_02",
+      "category": "general",
+      "topic": "通勤手当",
+      "question": "通勤手当の上限額はいくらですか？",
+      "expected_answer_contains": ["50,000円", "5万円"],
+      "source_file": "通勤手当規程.md",
+      "difficulty": "easy"
+    },
+    {
+      "id": "general_03",
+      "category": "general",
+      "topic": "休暇",
+      "question": "年次有給休暇は入社後どのくらいで付与されますか？",
+      "expected_answer_contains": ["6ヶ月", "10日"],
+      "source_file": "休暇規程.md",
+      "difficulty": "easy"
+    },
+    {
+      "id": "general_04",
+      "category": "general",
+      "topic": "休暇",
+      "question": "結婚休暇は何日取得できますか？",
+      "expected_answer_contains": ["5日"],
+      "source_file": "休暇規程.md",
+      "difficulty": "easy"
+    },
+    {
+      "id": "general_05",
+      "category": "general",
+      "topic": "経費",
+      "question": "経費精算の締め日と支払日を教えてください。",
+      "expected_answer_contains": ["15日", "25日"],
+      "source_file": "経費精算規程.md",
+      "difficulty": "easy"
+    },
+    {
+      "id": "exception_01",
+      "category": "exception",
+      "topic": "通勤手当",
+      "question": "アルバイトの通勤手当の申請方法を教えてください。",
+      "expected_answer_contains": ["紙", "通勤届（短期雇用者用）", "店舗責任者"],
+      "expected_answer_must_not_contain": ["HR Portal", "オンラインシステム"],
+      "source_file": "通勤手当規程.md",
+      "difficulty": "hard",
+      "notes": "Exception in 附則第3条 - different from regular employee process"
+    },
+    {
+      "id": "exception_02",
+      "category": "exception",
+      "topic": "通勤手当",
+      "question": "アルバイトの通勤手当の上限額はいくらですか？",
+      "expected_answer_contains": ["20,000円", "2万円"],
+      "expected_answer_must_not_contain": ["50,000円", "5万円"],
+      "source_file": "通勤手当規程.md",
+      "difficulty": "hard",
+      "notes": "Exception: 20,000 vs regular 50,000"
+    },
+    {
+      "id": "exception_03",
+      "category": "exception",
+      "topic": "休暇",
+      "question": "アルバイトは結婚休暇を取得できますか？",
+      "expected_answer_contains": ["付与しない", "認められない", "対象外", "できない", "取得できません", "付与されません"],
+      "source_file": "休暇規程.md",
+      "difficulty": "hard",
+      "notes": "Exception: アルバイトは結婚休暇対象外"
+    },
+    {
+      "id": "exception_04",
+      "category": "exception",
+      "topic": "休暇",
+      "question": "パートタイム従業員は時間単位で有給休暇を取得できますか？",
+      "expected_answer_contains": ["認められない", "できない", "対象外"],
+      "source_file": "休暇規程.md",
+      "difficulty": "hard",
+      "notes": "Exception: パートは時間単位取得不可"
+    },
+    {
+      "id": "exception_05",
+      "category": "exception",
+      "topic": "経費",
+      "question": "アルバイトが経費精算できるものは何ですか？",
+      "expected_answer_contains": ["交通費", "のみ"],
+      "expected_answer_must_not_contain": ["接待交際費", "出張"],
+      "source_file": "経費精算規程.md",
+      "difficulty": "hard",
+      "notes": "Exception: アルバイトは交通費のみ"
+    }
+  ]
+}

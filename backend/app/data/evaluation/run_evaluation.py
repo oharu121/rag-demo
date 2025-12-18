@@ -247,16 +247,10 @@ def main():
     else:
         # Import real RAG service
         try:
-            from app.services.rag_service import RAGService
-            from app.services.document_service import DocumentService
-            from app.services.vectorstore_service import VectorStoreService
-            from app.services.embedding_service import EmbeddingService
+            from app.services.rag_service import get_rag_service
 
             print("\nInitializing RAG service...")
-            embedding_service = EmbeddingService()
-            vectorstore_service = VectorStoreService(embedding_service)
-            document_service = DocumentService(vectorstore_service)
-            rag_service = RAGService(vectorstore_service)
+            rag_service = get_rag_service()
 
             print("RAG service initialized successfully")
         except ImportError as e:

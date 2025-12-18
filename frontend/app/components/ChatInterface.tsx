@@ -16,12 +16,23 @@ import { PreviewHintCallout } from "./PreviewHintCallout";
 import { UploadGuideCallout } from "./UploadGuideCallout";
 import { DatasetSelector } from "./DatasetSelector";
 import { EvaluationSummary } from "./EvaluationSummary";
-import { runEvaluation } from "@/lib/api";
+import { streamEvaluation } from "@/lib/api";
 import type { Document, ChunkingStrategy, DocumentSet, ScoringData, EvaluationScore } from "@/lib/types";
 import type { ChatInputRef } from "./ChatInput";
 
 export function ChatInterface() {
-  const { messages, isLoading, error, sendMessage, clearMessages, clearError, addEvaluationMessage, setIsLoading } = useChat();
+  const {
+    messages,
+    isLoading,
+    error,
+    sendMessage,
+    clearMessages,
+    clearError,
+    setIsLoading,
+    startEvaluationQuestion,
+    appendEvaluationToken,
+    completeEvaluationQuestion,
+  } = useChat();
   const { isReady, isStarting } = useServerStatus();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(true);
@@ -64,48 +75,58 @@ export function ChatInterface() {
     [documentSet, clearMessages]
   );
 
-  // Run evaluation test
+  // Run evaluation test with streaming
   const handleRunEvaluation = useCallback(async () => {
     if (isEvaluating || isLoading) return;
 
     setIsEvaluating(true);
     setEvaluationScore(null);
     clearMessages();
-    setEvaluationProgress({ current: 0, total: 4 });
+    setEvaluationProgress({ current: 0, total: 10 }); // Default to 10, will update on query_start
 
     try {
-      const response = await runEvaluation(documentSet, strategy);
-      const { queries, score } = response.results;
+      for await (const event of streamEvaluation(documentSet, strategy)) {
+        switch (event.type) {
+          case "query_start":
+            // Start new question - add user message and streaming assistant placeholder
+            setEvaluationProgress({ current: event.data.index + 1, total: event.data.total });
+            startEvaluationQuestion(event.data.question);
+            break;
 
-      // Add each query result as a message pair with delay for natural feel
-      for (let i = 0; i < queries.length; i++) {
-        const query = queries[i];
-        setEvaluationProgress({ current: i + 1, total: queries.length });
+          case "token":
+            // Append token to current streaming answer
+            appendEvaluationToken(event.data.token);
+            break;
 
-        const scoring: ScoringData = {
-          isCorrect: query.is_correct,
-          foundTerms: query.found_terms,
-          missingTerms: query.missing_terms,
-          prohibitedFound: query.prohibited_found,
-          explanation: query.explanation,
-        };
+          case "query_done":
+            // Complete current answer with scoring
+            const scoring: ScoringData = {
+              isCorrect: event.data.scoring.is_correct,
+              foundTerms: event.data.scoring.found_terms,
+              missingTerms: event.data.scoring.missing_terms,
+              prohibitedFound: event.data.scoring.prohibited_found,
+              explanation: event.data.scoring.explanation,
+            };
+            completeEvaluationQuestion(scoring);
+            break;
 
-        addEvaluationMessage(query.question, query.answer, scoring);
+          case "complete":
+            // All queries done - set final score
+            setEvaluationScore(event.data.score);
+            break;
 
-        // Small delay between messages for visual effect
-        if (i < queries.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 300));
+          case "error":
+            console.error("Evaluation error:", event.data.message);
+            break;
         }
       }
-
-      setEvaluationScore(score);
     } catch (err) {
       console.error("Evaluation failed:", err);
     } finally {
       setIsEvaluating(false);
       setEvaluationProgress({ current: 0, total: 0 });
     }
-  }, [isEvaluating, isLoading, documentSet, strategy, clearMessages, addEvaluationMessage]);
+  }, [isEvaluating, isLoading, documentSet, strategy, clearMessages, startEvaluationQuestion, appendEvaluationToken, completeEvaluationQuestion]);
 
   const allDocuments = [...sampleDocuments, ...uploadedDocuments];
   const hasSampleDocs = sampleDocuments.length > 0;
