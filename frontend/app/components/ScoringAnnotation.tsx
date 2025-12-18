@@ -13,7 +13,12 @@ interface ScoringAnnotationProps {
 }
 
 export function ScoringAnnotation({ scoring }: ScoringAnnotationProps) {
-  const { isCorrect, foundTerms, explanation } = scoring;
+  const { isCorrect, foundTerms, missingTerms, prohibitedFound, explanation } = scoring;
+
+  // For failures, show up to 3 expected terms as hint
+  const expectedHint = missingTerms.length > 0
+    ? missingTerms.slice(0, 3).join("」「")
+    : null;
 
   return (
     <div
@@ -43,9 +48,19 @@ export function ScoringAnnotation({ scoring }: ScoringAnnotationProps) {
       >
         {explanation}
       </p>
-      {foundTerms.length > 0 && (
+      {isCorrect && foundTerms.length > 0 && (
         <p className="mt-1 text-xs text-gray-500">
-          Found: {foundTerms.join(", ")}
+          検出: {foundTerms.join(", ")}
+        </p>
+      )}
+      {!isCorrect && expectedHint && (
+        <p className="mt-1 text-xs text-gray-500">
+          期待: 「{expectedHint}」など
+        </p>
+      )}
+      {!isCorrect && prohibitedFound.length > 0 && (
+        <p className="mt-1 text-xs text-red-500">
+          誤検出: {prohibitedFound.join(", ")}
         </p>
       )}
     </div>

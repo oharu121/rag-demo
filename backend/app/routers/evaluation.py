@@ -279,6 +279,8 @@ async def stream_evaluation(
 
     async def generate():
         try:
+            print(f"[Eval] Starting evaluation: document_set={document_set}, strategy={strategy}", flush=True)
+
             # Validate inputs
             try:
                 doc_set_enum = DocumentSet(document_set)
@@ -295,6 +297,7 @@ async def stream_evaluation(
             # Load test queries
             test_queries = load_test_queries()
             total = len(test_queries)
+            print(f"[Eval] Loaded {total} test queries", flush=True)
 
             # Get RAG service
             rag_service = get_rag_service()
@@ -304,6 +307,9 @@ async def stream_evaluation(
             for index, query in enumerate(test_queries):
                 query_id = query["id"]
                 question = query["question"]
+
+                # Log query start
+                print(f"[Eval {index+1}/{total}] Q: {question}", flush=True)
 
                 # Send query_start event
                 yield f"event: query_start\ndata: {json.dumps({'id': query_id, 'category': query['category'], 'question': question, 'index': index, 'total': total})}\n\n"
@@ -326,9 +332,8 @@ async def stream_evaluation(
                             return
                         # Skip sources/chunks/done events - we only need tokens
 
-                    # Log answer for debugging
-                    logger.info(f"[Evaluation Stream] Q: {question}")
-                    logger.info(f"[Evaluation Stream] A: {full_answer[:300]}...")
+                    # Log answer for debugging (print goes to HF Spaces logs)
+                    print(f"[Eval {index+1}/{total}] A: {full_answer[:200]}...", flush=True)
 
                     # Check answer quality
                     scoring = check_answer_quality(
@@ -341,7 +346,7 @@ async def stream_evaluation(
                         correct_count += 1
 
                     status = "✓" if scoring["is_correct"] else "✗"
-                    logger.info(f"[Evaluation Stream] {status} {scoring['explanation']} | found={scoring['found_terms']} | prohibited={scoring['prohibited_found']}")
+                    print(f"[Eval {index+1}/{total}] {status} found={scoring['found_terms']} | missing={scoring['missing_terms']} | prohibited={scoring['prohibited_found']}", flush=True)
 
                     # Send query_done event with scoring
                     query_done_data = {
@@ -358,7 +363,7 @@ async def stream_evaluation(
                     yield f"event: query_done\ndata: {json.dumps(query_done_data)}\n\n"
 
                 except Exception as e:
-                    logger.error(f"[Evaluation Stream] Error on query {query_id}: {e}")
+                    print(f"[Eval {index+1}/{total}] ERROR: {e}", flush=True)
                     # Send error for this query but continue with others
                     query_done_data = {
                         "id": query_id,
@@ -384,10 +389,14 @@ async def stream_evaluation(
             }
             yield f"event: complete\ndata: {json.dumps(complete_data)}\n\n"
 
+            # Final summary
+            print(f"[Eval] Complete: {correct_count}/{total} ({percentage}%)", flush=True)
+
         except FileNotFoundError as e:
+            print(f"[Eval] File not found: {e}", flush=True)
             yield f"event: error\ndata: {json.dumps({'message': str(e)})}\n\n"
         except Exception as e:
-            logger.error(f"[Evaluation Stream] Unexpected error: {e}")
+            print(f"[Eval] Unexpected error: {e}", flush=True)
             yield f"event: error\ndata: {json.dumps({'message': f'Evaluation failed: {str(e)}'})}\n\n"
 
     return StreamingResponse(
