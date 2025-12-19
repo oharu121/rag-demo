@@ -44,6 +44,12 @@ const STRATEGY_INFO = {
     pros: "精度と文脈",
     cons: "少し遅い",
   },
+  hypothetical_questions: {
+    name: "仮説質問生成",
+    description: "LLMでユーザー視点の質問を生成しインデックス",
+    pros: "エイリアス解決",
+    cons: "インデックス時間",
+  },
 } as const;
 
 export function DatasetSelector({
@@ -188,7 +194,7 @@ export function DatasetSelector({
         <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
           チャンキング戦略
         </label>
-        <div className="mt-2 grid grid-cols-3 gap-3">
+        <div className="mt-2 grid grid-cols-4 gap-3">
           {(Object.keys(STRATEGY_INFO) as ChunkingStrategy[]).map((s) => {
             const info = STRATEGY_INFO[s];
             const isSelected = strategy === s;

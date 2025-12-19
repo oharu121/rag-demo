@@ -75,8 +75,18 @@ class StreamingCallbackHandler(BaseCallbackHandler):
         self.queue.put_nowait({"type": "token", "data": {"token": token}})
 
 
-def format_docs_with_citations(docs: list[Document], use_parent_content: bool = False) -> str:
-    """引用メタデータ付きでドキュメントをフォーマット"""
+def format_docs_with_citations(
+    docs: list[Document],
+    use_parent_content: bool = False,
+    use_original_content: bool = False,
+) -> str:
+    """引用メタデータ付きでドキュメントをフォーマット
+
+    Args:
+        docs: ドキュメントのリスト
+        use_parent_content: Parent-Child戦略で親コンテンツを使用するか
+        use_original_content: Hypothetical Questions戦略で元コンテンツを使用するか
+    """
     formatted = []
     for doc in docs:
         source = doc.metadata.get("source", "unknown")
@@ -88,8 +98,12 @@ def format_docs_with_citations(docs: list[Document], use_parent_content: bool = 
 
         header = f"[出典: {filename}, {start_line}-{end_line}行目]"
 
-        # Parent-child strategyの場合、親コンテンツを使用
-        if use_parent_content and doc.metadata.get("parent_content"):
+        # Hypothetical Questions戦略の場合、元のチャンクコンテンツを使用
+        # (インデックスは質問だが、LLMには元のコンテンツを渡す)
+        if use_original_content and doc.metadata.get("original_content"):
+            content = doc.metadata["original_content"]
+        # Parent-child戦略の場合、親コンテンツを使用
+        elif use_parent_content and doc.metadata.get("parent_content"):
             content = doc.metadata["parent_content"]
         else:
             content = doc.page_content
@@ -241,8 +255,9 @@ class RAGService:
         # docsのみのリストも作成
         docs = [doc for doc, score in docs_with_scores]
 
-        # Determine if we should use parent content
+        # Determine content source based on strategy
         use_parent = strategy == ChunkingStrategy.PARENT_CHILD
+        use_original = strategy == ChunkingStrategy.HYPOTHETICAL_QUESTIONS
 
         # チャンク情報を送信（スコア付き）
         chunks_info = []
@@ -258,10 +273,16 @@ class RAGService:
                 "chunking_strategy": doc.metadata.get("chunking_strategy", "unknown"),
             }
 
-            # Add parent content if available
+            # Add parent content if available (Parent-Child strategy)
             if doc.metadata.get("parent_content"):
                 chunk_info["has_parent"] = True
                 chunk_info["parent_content_preview"] = doc.metadata["parent_content"][:200] + "..."
+
+            # Add original content if available (Hypothetical Questions strategy)
+            if doc.metadata.get("original_content"):
+                chunk_info["is_question"] = True
+                chunk_info["original_content"] = doc.metadata["original_content"]
+                chunk_info["original_content_preview"] = doc.metadata["original_content"][:200] + "..."
 
             chunks_info.append(chunk_info)
 
@@ -288,8 +309,14 @@ class RAGService:
 
         yield {"type": "sources", "data": {"sources": sources}}
 
-        # コンテキストをフォーマット (parent-childの場合は親コンテンツを使用)
-        context = format_docs_with_citations(docs, use_parent_content=use_parent)
+        # コンテキストをフォーマット
+        # - parent-childの場合は親コンテンツを使用
+        # - hypothetical_questionsの場合は元のチャンクコンテンツを使用
+        context = format_docs_with_citations(
+            docs,
+            use_parent_content=use_parent,
+            use_original_content=use_original,
+        )
         history_text = format_history(history or [])
 
         # プロンプトを構築
@@ -481,8 +508,9 @@ class RAGService:
 
         docs = [doc for doc, score in docs_with_scores]
 
-        # Determine if we should use parent content
+        # Determine content source based on strategy
         use_parent = strategy_enum == ChunkingStrategy.PARENT_CHILD
+        use_original = strategy_enum == ChunkingStrategy.HYPOTHETICAL_QUESTIONS
 
         # Build chunks info
         chunks_info = []
@@ -499,10 +527,20 @@ class RAGService:
             if doc.metadata.get("parent_content"):
                 chunk_info["has_parent"] = True
                 chunk_info["parent_content_preview"] = doc.metadata["parent_content"][:200] + "..."
+            if doc.metadata.get("original_content"):
+                chunk_info["is_question"] = True
+                chunk_info["original_content"] = doc.metadata["original_content"]
+                chunk_info["original_content_preview"] = doc.metadata["original_content"][:200] + "..."
             chunks_info.append(chunk_info)
 
         # Format context
-        context = format_docs_with_citations(docs, use_parent_content=use_parent)
+        # - parent-childの場合は親コンテンツを使用
+        # - hypothetical_questionsの場合は元のチャンクコンテンツを使用
+        context = format_docs_with_citations(
+            docs,
+            use_parent_content=use_parent,
+            use_original_content=use_original,
+        )
         history_text = format_history(history or [])
 
         # Build prompt

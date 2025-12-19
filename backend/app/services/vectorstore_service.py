@@ -213,6 +213,9 @@ class VectorStoreService:
         """
         Pre-build all collection combinations for faster switching.
         Returns dict mapping collection_name -> chunk_count (-1 if already exists)
+
+        Note: Hypothetical Questions strategy is only built for ORIGINAL dataset
+        (the harder test case) to save indexing time and API costs.
         """
         from app.services.document_service import get_document_service
 
@@ -228,6 +231,12 @@ class VectorStoreService:
             print(f"[Build All] Loaded {len(documents)} documents for {doc_set.value}", flush=True)
 
             for strategy in ChunkingStrategy:
+                # Skip hypothetical_questions for optimized dataset
+                # (only apply to original dataset - the harder test case)
+                if strategy == ChunkingStrategy.HYPOTHETICAL_QUESTIONS and doc_set != DocumentSet.ORIGINAL:
+                    print(f"[Build All] Skipping {strategy.value} for {doc_set.value} (only for original)", flush=True)
+                    continue
+
                 collection_name = get_collection_name(doc_set, strategy)
 
                 # Skip if already exists on disk

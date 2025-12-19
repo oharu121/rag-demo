@@ -14,6 +14,7 @@ class ChunkingStrategy(str, Enum):
     STANDARD = "standard"      # 1000/200 - baseline
     LARGE = "large"            # 2000/500 - more context
     PARENT_CHILD = "parent_child"  # small chunks for retrieval, parent for context
+    HYPOTHETICAL_QUESTIONS = "hypothetical_questions"  # LLM generates questions, index questions, retrieve chunks
 
 
 class DocumentSet(str, Enum):
@@ -31,6 +32,11 @@ CHUNKING_CONFIGS = {
         "parent_chunk_overlap": 200,
         "child_chunk_size": 400,
         "child_chunk_overlap": 50,
+    },
+    ChunkingStrategy.HYPOTHETICAL_QUESTIONS: {
+        "chunk_size": 1000,
+        "chunk_overlap": 200,
+        "questions_per_chunk": 3,
     },
 }
 

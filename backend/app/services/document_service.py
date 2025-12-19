@@ -136,6 +136,8 @@ class DocumentService:
 
         if strategy == ChunkingStrategy.PARENT_CHILD:
             return self._split_parent_child(documents, config)
+        elif strategy == ChunkingStrategy.HYPOTHETICAL_QUESTIONS:
+            return self._split_hypothetical_questions(documents, config)
         else:
             return self._split_standard(documents, config)
 
@@ -217,6 +219,84 @@ class DocumentService:
 
         print(f"{len(all_chunks)}個のチャンクに分割しました (parent-child: {len(parent_chunks)} parents)", flush=True)
         return all_chunks
+
+    def _split_hypothetical_questions(
+        self,
+        documents: list[Document],
+        config: dict,
+    ) -> list[Document]:
+        """
+        Hypothetical Questions chunking strategy.
+
+        Generates user-facing questions for each chunk using an LLM.
+        The questions are indexed (for similarity search), but metadata
+        contains the original chunk content (for LLM context).
+
+        This solves the alias mismatch problem by resolving domain terminology
+        (e.g., "第2条の2に定める者") to user language (e.g., "アルバイト")
+        at index time.
+        """
+        from app.services.question_generator import get_question_generator
+
+        # First, create standard chunks
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=config["chunk_size"],
+            chunk_overlap=config["chunk_overlap"],
+            length_function=len,
+            add_start_index=True,
+            separators=["\n## ", "\n### ", "\n\n", "\n", "。", "、", " "],
+        )
+        chunks = splitter.split_documents(documents)
+
+        # Add line numbers to metadata
+        chunks = calculate_line_numbers(chunks)
+
+        # Generate questions for each chunk
+        generator = get_question_generator()
+        num_questions = config.get("questions_per_chunk", 3)
+
+        print(f"[HypotheticalQuestions] Generating questions for {len(chunks)} chunks...", flush=True)
+
+        question_docs = []
+        for i, chunk in enumerate(chunks):
+            chunk_id = f"chunk_{i}"
+
+            # Generate hypothetical questions
+            questions = generator.generate_questions(chunk.page_content, num_questions)
+
+            if not questions:
+                print(f"  Warning: No questions generated for chunk {i + 1}, using chunk as-is", flush=True)
+                # Fallback: use the chunk itself if no questions generated
+                question_doc = Document(
+                    page_content=chunk.page_content[:200],  # Use first 200 chars as "question"
+                    metadata={
+                        **chunk.metadata,
+                        "chunk_id": chunk_id,
+                        "original_content": chunk.page_content,
+                        "chunking_strategy": "hypothetical_questions",
+                        "is_question": True,
+                        "question_index": 0,
+                    }
+                )
+                question_docs.append(question_doc)
+            else:
+                # Create question documents pointing to this chunk
+                for q_idx, question in enumerate(questions):
+                    question_doc = Document(
+                        page_content=question,
+                        metadata={
+                            **chunk.metadata,
+                            "chunk_id": chunk_id,
+                            "original_content": chunk.page_content,
+                            "chunking_strategy": "hypothetical_questions",
+                            "is_question": True,
+                            "question_index": q_idx,
+                        }
+                    )
+                    question_docs.append(question_doc)
+
+        print(f"{len(question_docs)}個の質問ドキュメントを生成しました (hypothetical_questions: {len(chunks)} original chunks)", flush=True)
+        return question_docs
 
     def list_documents(
         self,
@@ -366,6 +446,11 @@ class DocumentService:
                 "id": ChunkingStrategy.PARENT_CHILD.value,
                 "name": "Parent-Child",
                 "description": "小さなチャンクで検索し、親チャンクをコンテキストとして使用。",
+            },
+            {
+                "id": ChunkingStrategy.HYPOTHETICAL_QUESTIONS.value,
+                "name": "Hypothetical Questions",
+                "description": "LLMでユーザー視点の質問を生成してインデックス。エイリアス問題を解決。",
             },
         ]
 

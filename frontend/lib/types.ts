@@ -139,7 +139,7 @@ export type SSEEvent =
   | SSEErrorEvent;
 
 // Strategy and document set options
-export type ChunkingStrategy = "standard" | "large" | "parent_child";
+export type ChunkingStrategy = "standard" | "large" | "parent_child" | "hypothetical_questions";
 export type DocumentSet = "original" | "optimized";
 
 export interface StrategyOption {
