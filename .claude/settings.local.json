@@ -3,6 +3,7 @@
     "allow": [
       "Bash(npm run build:*)",
       "Bash(npx tsc:*)",
+      "Bash(cd:*)",
       "Bash(cat:*)",
       "Bash(dir:*)",
       "Bash(find:*)",
@@ -19,7 +20,7 @@
       "mcp__chrome-devtools__list_pages",
       "mcp__chrome-devtools__get_network_request",
       "mcp__chrome-devtools__wait_for",
-      "Bash(cd:*)"
+      "WebSearch"
     ],
     "deny": [],
     "ask": []
