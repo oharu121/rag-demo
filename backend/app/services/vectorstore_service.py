@@ -209,6 +209,43 @@ class VectorStoreService:
 
         return False
 
+    def build_all_collections(self) -> dict[str, int]:
+        """
+        Pre-build all collection combinations for faster switching.
+        Returns dict mapping collection_name -> chunk_count (-1 if already exists)
+        """
+        from app.services.document_service import get_document_service
+
+        doc_service = get_document_service()
+        results = {}
+
+        for doc_set in DocumentSet:
+            if not doc_service.has_documents(doc_set):
+                print(f"[Build All] Skipping {doc_set.value}: no documents", flush=True)
+                continue
+
+            documents = doc_service.load_documents(doc_set)
+            print(f"[Build All] Loaded {len(documents)} documents for {doc_set.value}", flush=True)
+
+            for strategy in ChunkingStrategy:
+                collection_name = get_collection_name(doc_set, strategy)
+
+                # Skip if already exists on disk
+                collection_path = self.db_path / collection_name
+                if collection_path.exists():
+                    print(f"[Build All] Collection already exists: {collection_name}", flush=True)
+                    results[collection_name] = -1
+                    continue
+
+                # Build collection
+                print(f"[Build All] Building collection: {collection_name}", flush=True)
+                chunks = doc_service.split_documents(documents, strategy)
+                self.get_or_create(chunks, doc_set, strategy)
+                results[collection_name] = len(chunks)
+                print(f"[Build All] Created {collection_name} with {len(chunks)} chunks", flush=True)
+
+        return results
+
 
 # シングルトンインスタンス
 _vectorstore_service: VectorStoreService | None = None

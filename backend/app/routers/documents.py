@@ -18,6 +18,7 @@ from app.models.schemas import (
 )
 from app.services.document_service import get_document_service
 from app.services.rag_service import get_rag_service
+from app.services.vectorstore_service import get_vectorstore_service
 from app.utils.errors import DocumentException, RAGException, ErrorMessages
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -36,6 +37,7 @@ async def debug_routes():
             "POST /api/documents/upload",
             "DELETE /api/documents/{doc_id}",
             "POST /api/documents/rebuild",
+            "POST /api/documents/build-all",
         ]
     }
 
@@ -166,3 +168,31 @@ async def get_options():
     """Get available strategies, document sets, and collections for the UI"""
     rag_service = get_rag_service()
     return rag_service.get_available_options()
+
+
+@router.post("/build-all")
+async def build_all_collections():
+    """
+    Pre-build all vector collections for faster switching.
+    Builds all combinations of document_set × chunking_strategy.
+    """
+    try:
+        vectorstore_service = get_vectorstore_service()
+        results = vectorstore_service.build_all_collections()
+
+        # Count new vs existing
+        new_count = sum(1 for v in results.values() if v >= 0)
+        existing_count = sum(1 for v in results.values() if v < 0)
+
+        return {
+            "status": "completed",
+            "collections": results,
+            "summary": {
+                "new_collections": new_count,
+                "existing_collections": existing_count,
+                "total": len(results),
+            },
+            "message": f"Built {new_count} new collections, {existing_count} already existed.",
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

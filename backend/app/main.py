@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from app.config import get_settings
 from app.routers import chat, documents, evaluation, health
 from app.services.rag_service import get_rag_service
+from app.services.vectorstore_service import get_vectorstore_service
 from app.utils.errors import RAGException
 
 
@@ -27,6 +28,16 @@ async def lifespan(app: FastAPI):
         rag_service = get_rag_service()
         rag_service.initialize()
         print("初期化完了!", flush=True)
+
+        # Pre-build all collections if enabled (for faster demo switching)
+        if os.getenv("PREBUILD_COLLECTIONS", "false").lower() == "true":
+            print("=" * 50, flush=True)
+            print("Pre-building all vector collections...", flush=True)
+            vectorstore_service = get_vectorstore_service()
+            results = vectorstore_service.build_all_collections()
+            new_count = sum(1 for v in results.values() if v >= 0)
+            existing_count = sum(1 for v in results.values() if v < 0)
+            print(f"Pre-build complete: {new_count} new, {existing_count} existing", flush=True)
     except Exception as e:
         print(f"初期化エラー: {e}", flush=True)
 
