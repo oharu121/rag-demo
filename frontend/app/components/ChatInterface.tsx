@@ -42,6 +42,7 @@ export function ChatInterface() {
   const [rebuildButtonRef, setRebuildButtonRef] = useState<HTMLButtonElement | null>(null);
   const [documentSet, setDocumentSet] = useState<DocumentSet>("original");
   const [strategy, setStrategy] = useState<ChunkingStrategy>("standard");
+  const [useReranking, setUseReranking] = useState<boolean>(false);
   // Pass documentSet to useDocuments so it fetches the correct document list
   const documentsHook = useDocuments(documentSet);
   const { sampleDocuments, uploadedDocuments } = documentsHook;
@@ -58,9 +59,9 @@ export function ChatInterface() {
   // Wrap sendMessage to include current options
   const handleSendMessage = useCallback(
     (content: string) => {
-      sendMessage(content, { documentSet, strategy });
+      sendMessage(content, { documentSet, strategy, useReranking });
     },
-    [sendMessage, documentSet, strategy]
+    [sendMessage, documentSet, strategy, useReranking]
   );
 
   // Clear chat when dataset changes
@@ -85,7 +86,7 @@ export function ChatInterface() {
     setEvaluationProgress({ current: 0, total: 10 }); // Default to 10, will update on query_start
 
     try {
-      for await (const event of streamEvaluation(documentSet, strategy)) {
+      for await (const event of streamEvaluation(documentSet, strategy, useReranking)) {
         switch (event.type) {
           case "query_start":
             // Start new question - add user message and streaming assistant placeholder
@@ -126,7 +127,7 @@ export function ChatInterface() {
       setIsEvaluating(false);
       setEvaluationProgress({ current: 0, total: 0 });
     }
-  }, [isEvaluating, isLoading, documentSet, strategy, clearMessages, startEvaluationQuestion, appendEvaluationToken, completeEvaluationQuestion]);
+  }, [isEvaluating, isLoading, documentSet, strategy, useReranking, clearMessages, startEvaluationQuestion, appendEvaluationToken, completeEvaluationQuestion]);
 
   const allDocuments = [...sampleDocuments, ...uploadedDocuments];
   const hasSampleDocs = sampleDocuments.length > 0;
@@ -255,8 +256,10 @@ export function ChatInterface() {
         <DatasetSelector
           documentSet={documentSet}
           strategy={strategy}
+          useReranking={useReranking}
           onDocumentSetChange={handleDocumentSetChange}
           onStrategyChange={setStrategy}
+          onUseRerankingChange={setUseReranking}
           disabled={isLoading}
         />
 

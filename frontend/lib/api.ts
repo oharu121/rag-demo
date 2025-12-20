@@ -140,6 +140,7 @@ export async function* streamChat(
   options?: {
     documentSet?: DocumentSet;
     strategy?: ChunkingStrategy;
+    useReranking?: boolean;
   }
 ): AsyncGenerator<SSEEvent, void, unknown> {
   const response = await fetch(`${baseUrl}${endpoints.chat}`, {
@@ -152,6 +153,7 @@ export async function* streamChat(
       history: history.map((m) => ({ role: m.role, content: m.content })),
       document_set: options?.documentSet,
       strategy: options?.strategy,
+      use_reranking: options?.useReranking,
     }),
   });
 
@@ -265,10 +267,11 @@ export async function runEvaluation(
  */
 export async function* streamEvaluation(
   documentSet: DocumentSet,
-  strategy: ChunkingStrategy
+  strategy: ChunkingStrategy,
+  useReranking: boolean = false
 ): AsyncGenerator<EvalSSEEvent, void, unknown> {
   const response = await fetch(
-    `${baseUrl}/api/evaluate/stream?document_set=${documentSet}&strategy=${strategy}`
+    `${baseUrl}/api/evaluate/stream?document_set=${documentSet}&strategy=${strategy}&use_reranking=${useReranking}`
   );
 
   if (!response.ok) {

@@ -8,6 +8,7 @@ import { UI_TEXT, ERROR_CODE_MESSAGES } from "@/lib/constants";
 export interface ChatOptions {
   documentSet?: DocumentSet;
   strategy?: ChunkingStrategy;
+  useReranking?: boolean;
 }
 
 export interface MessageWithChunks extends Message {

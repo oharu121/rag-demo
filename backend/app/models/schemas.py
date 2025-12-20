@@ -25,6 +25,7 @@ class ChatRequest(BaseModel):
     history: list[MessageHistory] = Field(default_factory=list)
     document_set: Optional[DocumentSet] = None
     strategy: Optional[ChunkingStrategy] = None
+    use_reranking: Optional[bool] = None  # Enable cross-encoder reranking
 
 
 class Source(BaseModel):

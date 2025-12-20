@@ -69,7 +69,12 @@ class Settings(BaseSettings):
     # RAG Config (default values - can be overridden by strategy)
     chunk_size: int = 1000
     chunk_overlap: int = 200
-    retriever_k: int = 4  # Increased from 3 to get more context
+    retriever_k: int = 4  # Default retrieval count
+
+    # Reranking Config
+    reranker_model: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    reranker_initial_k: int = 10  # Retrieve more candidates for reranking
+    reranker_top_k: int = 4  # Final count after reranking
 
     # Default strategy and dataset
     default_chunking_strategy: ChunkingStrategy = ChunkingStrategy.STANDARD

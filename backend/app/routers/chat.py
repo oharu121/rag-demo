@@ -94,6 +94,7 @@ async def chat(request: Request, chat_request: ChatRequest):
                 history,
                 document_set=chat_request.document_set,
                 strategy=chat_request.strategy,
+                use_reranking=chat_request.use_reranking,
             ):
                 event_type = event.get("type", "token")
                 event_data = json.dumps(event.get("data", {}), ensure_ascii=False)

@@ -223,6 +223,7 @@ class RAGService:
         history: list[dict] | None = None,
         document_set: Optional[DocumentSet] = None,
         strategy: Optional[ChunkingStrategy] = None,
+        use_reranking: Optional[bool] = None,
     ) -> AsyncGenerator[dict, None]:
         """ストリーミングでRAGクエリを実行"""
         start_time = time.time()
@@ -230,6 +231,7 @@ class RAGService:
         # Use defaults if not specified
         document_set = document_set or self.settings.default_document_set
         strategy = strategy or self.settings.default_chunking_strategy
+        use_reranking = use_reranking or False
 
         # 初期化チェック
         if not self._initialized:
@@ -246,11 +248,24 @@ class RAGService:
         vectorstore_service = get_vectorstore_service()
 
         # 関連ドキュメントをスコア付きで取得
+        # リランキングが有効な場合は多めに取得
+        retrieval_k = self.settings.reranker_initial_k if use_reranking else None
         docs_with_scores = vectorstore_service.similarity_search_with_score(
             question,
             document_set=document_set,
             strategy=strategy,
+            k=retrieval_k,
         )
+
+        # リランキングを適用
+        if use_reranking and docs_with_scores:
+            from app.services.reranker_service import get_reranker_service
+            reranker = get_reranker_service()
+            docs_with_scores = reranker.rerank(
+                question,
+                docs_with_scores,
+                top_k=self.settings.reranker_top_k,
+            )
 
         # docsのみのリストも作成
         docs = [doc for doc, score in docs_with_scores]
@@ -469,6 +484,7 @@ class RAGService:
         history: list[dict] | None = None,
         document_set: Optional[str] = None,
         strategy: Optional[str] = None,
+        use_reranking: Optional[bool] = None,
     ) -> dict:
         """
         Synchronous RAG query for evaluation scripts.
@@ -478,6 +494,7 @@ class RAGService:
             history: Optional conversation history
             document_set: Document set name (string for evaluation convenience)
             strategy: Chunking strategy name (string for evaluation convenience)
+            use_reranking: Whether to apply cross-encoder reranking
 
         Returns:
             dict with 'answer' and 'chunks' keys
@@ -485,6 +502,7 @@ class RAGService:
         # Convert string params to enums if provided
         doc_set_enum = DocumentSet(document_set) if document_set else self.settings.default_document_set
         strategy_enum = ChunkingStrategy(strategy) if strategy else self.settings.default_chunking_strategy
+        use_reranking = use_reranking or False
 
         # Initialize if needed
         if not self._initialized:
@@ -500,11 +518,24 @@ class RAGService:
         vectorstore_service = get_vectorstore_service()
 
         # Get docs with scores
+        # リランキングが有効な場合は多めに取得
+        retrieval_k = self.settings.reranker_initial_k if use_reranking else None
         docs_with_scores = vectorstore_service.similarity_search_with_score(
             question,
             document_set=doc_set_enum,
             strategy=strategy_enum,
+            k=retrieval_k,
         )
+
+        # リランキングを適用
+        if use_reranking and docs_with_scores:
+            from app.services.reranker_service import get_reranker_service
+            reranker = get_reranker_service()
+            docs_with_scores = reranker.rerank(
+                question,
+                docs_with_scores,
+                top_k=self.settings.reranker_top_k,
+            )
 
         docs = [doc for doc, score in docs_with_scores]
 

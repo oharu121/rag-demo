@@ -126,7 +126,8 @@ class EvaluationResponse(BaseModel):
 @router.post("/quick", response_model=EvaluationResponse)
 async def run_quick_evaluation(
     document_set: str = "original",
-    strategy: str = "standard"
+    strategy: str = "standard",
+    use_reranking: bool = False,
 ) -> EvaluationResponse:
     """
     Run quick evaluation with 4 test queries on the specified dataset.
@@ -134,6 +135,7 @@ async def run_quick_evaluation(
     Args:
         document_set: "original" or "optimized"
         strategy: "standard", "large", or "parent_child"
+        use_reranking: Whether to apply cross-encoder reranking
 
     Returns:
         Evaluation results with scoring for each query
@@ -170,6 +172,7 @@ async def run_quick_evaluation(
                     question=query["question"],
                     document_set=document_set,
                     strategy=strategy,
+                    use_reranking=use_reranking,
                 )
                 answer = result.get("answer", "")
 
@@ -264,7 +267,8 @@ async def get_test_queries():
 @router.get("/stream")
 async def stream_evaluation(
     document_set: str = "original",
-    strategy: str = "standard"
+    strategy: str = "standard",
+    use_reranking: bool = False,
 ):
     """
     Stream evaluation results with token-by-token answer streaming.
@@ -279,7 +283,7 @@ async def stream_evaluation(
 
     async def generate():
         try:
-            print(f"[Eval] Starting evaluation: document_set={document_set}, strategy={strategy}", flush=True)
+            print(f"[Eval] Starting evaluation: document_set={document_set}, strategy={strategy}, use_reranking={use_reranking}", flush=True)
 
             # Validate inputs
             try:
@@ -322,6 +326,7 @@ async def stream_evaluation(
                         question=question,
                         document_set=doc_set_enum,
                         strategy=strategy_enum,
+                        use_reranking=use_reranking,
                     ):
                         if event["type"] == "token":
                             token = event["data"]["token"]

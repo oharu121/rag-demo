@@ -5,8 +5,10 @@ import type { ChunkingStrategy, DocumentSet } from "@/lib/types";
 interface DatasetSelectorProps {
   documentSet: DocumentSet;
   strategy: ChunkingStrategy;
+  useReranking: boolean;
   onDocumentSetChange: (value: DocumentSet) => void;
   onStrategyChange: (value: ChunkingStrategy) => void;
+  onUseRerankingChange: (value: boolean) => void;
   disabled?: boolean;
 }
 
@@ -52,11 +54,28 @@ const STRATEGY_INFO = {
   },
 } as const;
 
+const RERANKING_INFO = {
+  disabled: {
+    name: "リランキングなし",
+    description: "ベクトル検索の結果をそのまま使用",
+    pros: "高速",
+    cons: "精度は検索依存",
+  },
+  enabled: {
+    name: "リランキングあり",
+    description: "Cross-Encoderで検索結果を再評価",
+    pros: "精度向上",
+    cons: "少し遅い",
+  },
+} as const;
+
 export function DatasetSelector({
   documentSet,
   strategy,
+  useReranking,
   onDocumentSetChange,
   onStrategyChange,
+  onUseRerankingChange,
   disabled = false,
 }: DatasetSelectorProps) {
   const isOptimized = documentSet === "optimized";
@@ -229,6 +248,58 @@ export function DatasetSelector({
                   {info.description}
                 </p>
                 <div className={`mt-2 text-xs ${isSelected ? "text-blue-600" : "text-gray-400"}`}>
+                  <span className="text-emerald-600">✓</span>
+                  <span className="ml-1">{info.pros}</span>
+                  <span className="mx-2">·</span>
+                  <span className="text-amber-600">△</span>
+                  <span className="ml-1">{info.cons}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Reranking selector */}
+      <div className="max-w-4xl mx-auto mt-4">
+        <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+          リランキング
+        </label>
+        <div className="mt-2 grid grid-cols-2 gap-3">
+          {(["disabled", "enabled"] as const).map((option) => {
+            const info = RERANKING_INFO[option];
+            const isSelected = option === "enabled" ? useReranking : !useReranking;
+            return (
+              <button
+                key={option}
+                onClick={() => onUseRerankingChange(option === "enabled")}
+                disabled={disabled}
+                className={`p-3 rounded-xl border-2 text-left transition-all duration-200 ${
+                  isSelected
+                    ? "border-purple-400 bg-purple-50/80 shadow-sm"
+                    : "border-gray-200 bg-white/60 hover:border-gray-300 hover:bg-white/80"
+                } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+              >
+                <div className="flex items-center gap-2">
+                  <div
+                    className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                      isSelected
+                        ? "border-purple-500 bg-purple-500"
+                        : "border-gray-300"
+                    }`}
+                  >
+                    {isSelected && (
+                      <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                    )}
+                  </div>
+                  <span className={`font-medium ${isSelected ? "text-purple-900" : "text-gray-900"}`}>
+                    {info.name}
+                  </span>
+                </div>
+                <p className={`mt-1.5 text-xs leading-relaxed ${isSelected ? "text-purple-700" : "text-gray-500"}`}>
+                  {info.description}
+                </p>
+                <div className={`mt-2 text-xs ${isSelected ? "text-purple-600" : "text-gray-400"}`}>
                   <span className="text-emerald-600">✓</span>
                   <span className="ml-1">{info.pros}</span>
                   <span className="mx-2">·</span>
