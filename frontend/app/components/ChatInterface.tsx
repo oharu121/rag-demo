@@ -222,6 +222,14 @@ export function ChatInterface() {
           </div>
         </header>
 
+        {/* Persistent document chips bar */}
+        <DocumentChipsBar
+          ref={documentChipsRef}
+          documents={allDocuments}
+          onPreview={setPreviewDoc}
+          onShowMore={() => setIsDrawerOpen(true)}
+        />
+
         {/* Dataset selector bar */}
         <DatasetSelector
           documentSet={documentSet}
@@ -235,14 +243,6 @@ export function ChatInterface() {
           isEvaluating={isEvaluating}
           evaluationProgress={evaluationProgress}
           isReady={isReady}
-        />
-
-        {/* Persistent document chips bar */}
-        <DocumentChipsBar
-          ref={documentChipsRef}
-          documents={allDocuments}
-          onPreview={setPreviewDoc}
-          onShowMore={() => setIsDrawerOpen(true)}
         />
 
         {/* Messages area */}
