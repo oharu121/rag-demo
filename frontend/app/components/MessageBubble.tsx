@@ -1,39 +1,12 @@
 "use client";
 
 import type { MessageWithChunks } from "@/hooks/useChat";
+import { CATEGORY_DISPLAY_INFO } from "@/lib/constants";
 import { SourceCitation } from "./SourceCitation";
 import { LoadingSpinner } from "./LoadingSpinner";
 import { MayaAvatar, type AvatarState } from "./MayaAvatar";
 import { ChunkViewer } from "./ChunkViewer";
 import { ScoringAnnotation } from "./ScoringAnnotation";
-
-// Category display info for evaluation questions
-const CATEGORY_INFO: Record<string, { label: string; color: string }> = {
-  implicit_exception: {
-    label: "暗黙の例外",
-    color: "bg-amber-100 text-amber-700 border-amber-200",
-  },
-  multi_hop: {
-    label: "複数ホップ推論",
-    color: "bg-purple-100 text-purple-700 border-purple-200",
-  },
-  negation: {
-    label: "否定の理解",
-    color: "bg-red-100 text-red-700 border-red-200",
-  },
-  conditional: {
-    label: "条件判定",
-    color: "bg-blue-100 text-blue-700 border-blue-200",
-  },
-  not_in_documents: {
-    label: "存在しない情報",
-    color: "bg-gray-100 text-gray-600 border-gray-200",
-  },
-  cross_document: {
-    label: "複数文書横断",
-    color: "bg-emerald-100 text-emerald-700 border-emerald-200",
-  },
-};
 
 /**
  * Renders message content with inline citations styled in blue
@@ -72,7 +45,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     : "idling";
 
   if (isUser) {
-    const categoryInfo = message.category ? CATEGORY_INFO[message.category] : null;
+    const categoryInfo = message.category ? CATEGORY_DISPLAY_INFO[message.category] : null;
 
     return (
       <div className="flex justify-end">
@@ -81,7 +54,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           {categoryInfo && (
             <div className="mb-2">
               <span
-                className={`inline-block px-2 py-0.5 text-xs font-medium rounded border ${categoryInfo.color}`}
+                className={`inline-block px-2 py-0.5 text-xs font-medium rounded border ${categoryInfo.bgColor} ${categoryInfo.color}`}
               >
                 {categoryInfo.label}
               </span>

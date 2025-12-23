@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState, useCallback } from "react";
+import { useRef, useEffect, useState, useCallback, useMemo } from "react";
 import { useChat } from "@/hooks/useChat";
 import { useServerStatus } from "@/hooks/useServerStatus";
 import { useDocuments } from "@/hooks/useDocuments";
@@ -15,7 +15,7 @@ import { OnboardingTooltip } from "./OnboardingTooltip";
 import { PreviewHintCallout } from "./PreviewHintCallout";
 import { UploadGuideCallout } from "./UploadGuideCallout";
 import { DatasetSelector } from "./DatasetSelector";
-import { EvaluationSummary } from "./EvaluationSummary";
+import { EvaluationSummaryBubble } from "./EvaluationSummaryBubble";
 import { streamEvaluation } from "@/lib/api";
 import type { Document, ChunkingStrategy, DocumentSet, ScoringData, EvaluationScore } from "@/lib/types";
 import type { ChatInputRef } from "./ChatInput";
@@ -58,6 +58,26 @@ export function ChatInterface() {
   const chatInputRef = useRef<ChatInputRef>(null);
 
   const totalDocuments = sampleDocuments.length + uploadedDocuments.length;
+
+  // Compute category scores from evaluation messages
+  const categoryScores = useMemo(() => {
+    const scores: Record<string, { correct: number; total: number }> = {};
+
+    // Iterate through message pairs (user question + assistant answer)
+    for (let i = 0; i < messages.length; i += 2) {
+      const userMsg = messages[i];
+      const assistantMsg = messages[i + 1];
+
+      if (userMsg?.category && assistantMsg?.scoring) {
+        const cat = userMsg.category;
+        if (!scores[cat]) scores[cat] = { correct: 0, total: 0 };
+        scores[cat].total++;
+        if (assistantMsg.scoring.isCorrect) scores[cat].correct++;
+      }
+    }
+
+    return scores;
+  }, [messages]);
 
   // Wrap sendMessage to include current options
   const handleSendMessage = useCallback(
@@ -391,20 +411,24 @@ export function ChatInterface() {
                   <MessageBubble message={message} />
                 </div>
               ))}
+
+              {/* Evaluation summary bubble - appears after all messages */}
+              {evaluationScore && !isEvaluating && (
+                <div className="animate-fade-in-up mt-6">
+                  <EvaluationSummaryBubble
+                    score={evaluationScore}
+                    categoryScores={categoryScores}
+                    documentSet={documentSet}
+                    strategy={strategy}
+                    useReranking={useReranking}
+                  />
+                </div>
+              )}
             </div>
 
             <div ref={messagesEndRef} />
           </div>
         </main>
-
-        {/* Evaluation summary - show after evaluation completes */}
-        {evaluationScore && (
-          <EvaluationSummary
-            correct={evaluationScore.correct}
-            total={evaluationScore.total}
-            datasetName={documentSet === "optimized" ? "最適化済み" : "元データ"}
-          />
-        )}
 
         {/* Input area */}
         <ChatInput ref={chatInputRef} onSend={handleSendMessage} disabled={isLoading || isEvaluating || !isReady} />
