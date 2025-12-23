@@ -198,12 +198,13 @@ export function useChat() {
   const currentStreamingIdRef = useRef<string | null>(null);
 
   // Add user question and create streaming assistant placeholder
-  const startEvaluationQuestion = useCallback((question: string): string => {
+  const startEvaluationQuestion = useCallback((question: string, category?: string): string => {
     const userMessage: MessageWithChunks = {
       id: generateId(),
       role: "user",
       content: question,
       timestamp: new Date(),
+      category,  // Store category on the user question
     };
     const assistantId = generateId();
     const assistantMessage: MessageWithChunks = {

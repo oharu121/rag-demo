@@ -105,7 +105,7 @@ export function ChatInterface() {
           case "query_start":
             // Start new question - add user message and streaming assistant placeholder
             setEvaluationProgress({ current: event.data.index + 1, total: event.data.total });
-            startEvaluationQuestion(event.data.question);
+            startEvaluationQuestion(event.data.question, event.data.category);
             break;
 
           case "token":

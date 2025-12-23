@@ -9,6 +9,8 @@ export interface Message {
   sources?: Source[];
   timestamp: Date;
   isStreaming?: boolean;
+  // Evaluation-specific fields
+  category?: string;  // Category for evaluation questions (e.g., "implicit_exception", "multi_hop")
 }
 
 export interface Source {

@@ -7,6 +7,34 @@ import { MayaAvatar, type AvatarState } from "./MayaAvatar";
 import { ChunkViewer } from "./ChunkViewer";
 import { ScoringAnnotation } from "./ScoringAnnotation";
 
+// Category display info for evaluation questions
+const CATEGORY_INFO: Record<string, { label: string; color: string }> = {
+  implicit_exception: {
+    label: "暗黙の例外",
+    color: "bg-amber-100 text-amber-700 border-amber-200",
+  },
+  multi_hop: {
+    label: "複数ホップ推論",
+    color: "bg-purple-100 text-purple-700 border-purple-200",
+  },
+  negation: {
+    label: "否定の理解",
+    color: "bg-red-100 text-red-700 border-red-200",
+  },
+  conditional: {
+    label: "条件判定",
+    color: "bg-blue-100 text-blue-700 border-blue-200",
+  },
+  not_in_documents: {
+    label: "存在しない情報",
+    color: "bg-gray-100 text-gray-600 border-gray-200",
+  },
+  cross_document: {
+    label: "複数文書横断",
+    color: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  },
+};
+
 /**
  * Renders message content with inline citations styled in blue
  * Citations like [filename.txt:10-20] are highlighted
@@ -44,9 +72,21 @@ export function MessageBubble({ message }: MessageBubbleProps) {
     : "idling";
 
   if (isUser) {
+    const categoryInfo = message.category ? CATEGORY_INFO[message.category] : null;
+
     return (
       <div className="flex justify-end">
         <div className="max-w-[85%] bg-linear-to-br from-blue-500 to-blue-600 text-white rounded-2xl rounded-br-md shadow-md shadow-blue-500/20 px-5 py-3.5 transition-all duration-200 hover:shadow-lg">
+          {/* Category chip for evaluation questions */}
+          {categoryInfo && (
+            <div className="mb-2">
+              <span
+                className={`inline-block px-2 py-0.5 text-xs font-medium rounded border ${categoryInfo.color}`}
+              >
+                {categoryInfo.label}
+              </span>
+            </div>
+          )}
           <div className="whitespace-pre-wrap wrap-break-word leading-relaxed text-white/95">
             {message.content}
           </div>
