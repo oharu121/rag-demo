@@ -117,7 +117,7 @@ export function ChatInterface() {
     setIsEvaluating(true);
     setEvaluationScore(null);
     clearMessages();
-    setEvaluationProgress({ current: 0, total: 10 }); // Default to 10, will update on query_start
+    setEvaluationProgress({ current: 0, total: 0 }); // Will update on first query_start event
 
     try {
       for await (const event of streamEvaluation(documentSet, strategy, useReranking)) {
