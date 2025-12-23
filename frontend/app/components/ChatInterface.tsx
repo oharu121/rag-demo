@@ -185,36 +185,6 @@ export function ChatInterface() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {/* Evaluation button */}
-              <button
-                onClick={handleRunEvaluation}
-                disabled={isEvaluating || isLoading || !isReady}
-                className={`group flex items-center gap-2 px-4 py-2.5 text-sm font-medium
-                         rounded-xl border transition-all duration-200
-                         ${isEvaluating
-                           ? "bg-blue-50 border-blue-200 text-blue-700"
-                           : "text-gray-700 bg-white/80 border-gray-200/60 hover:bg-white hover:border-blue-300 hover:shadow-lg active:scale-[0.98]"
-                         }
-                         disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                {isEvaluating ? (
-                  <>
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                    <span>テスト中 {evaluationProgress.current}/{evaluationProgress.total}</span>
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-4 h-4 text-gray-500 group-hover:text-blue-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    <span>精度テスト</span>
-                  </>
-                )}
-              </button>
-
               {/* Document button */}
               <button
                 ref={documentButtonRef}
@@ -261,6 +231,10 @@ export function ChatInterface() {
           onStrategyChange={setStrategy}
           onUseRerankingChange={setUseReranking}
           disabled={isLoading}
+          onRunEvaluation={handleRunEvaluation}
+          isEvaluating={isEvaluating}
+          evaluationProgress={evaluationProgress}
+          isReady={isReady}
         />
 
         {/* Persistent document chips bar */}
