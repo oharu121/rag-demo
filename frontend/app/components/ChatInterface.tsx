@@ -49,6 +49,9 @@ export function ChatInterface() {
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [evaluationProgress, setEvaluationProgress] = useState({ current: 0, total: 0 });
   const [evaluationScore, setEvaluationScore] = useState<EvaluationScore | null>(null);
+  // DatasetSelector collapse state
+  const [isDatasetSelectorExpanded, setIsDatasetSelectorExpanded] = useState(true);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const documentButtonRef = useRef<HTMLButtonElement>(null);
   const documentChipsRef = useRef<HTMLDivElement>(null);
@@ -60,8 +63,13 @@ export function ChatInterface() {
   const handleSendMessage = useCallback(
     (content: string) => {
       sendMessage(content, { documentSet, strategy, useReranking });
+      // Auto-collapse after first message
+      if (!hasUserInteracted) {
+        setHasUserInteracted(true);
+        setIsDatasetSelectorExpanded(false);
+      }
     },
-    [sendMessage, documentSet, strategy, useReranking]
+    [sendMessage, documentSet, strategy, useReranking, hasUserInteracted]
   );
 
   // Clear chat when dataset changes
@@ -79,6 +87,12 @@ export function ChatInterface() {
   // Run evaluation test with streaming
   const handleRunEvaluation = useCallback(async () => {
     if (isEvaluating || isLoading) return;
+
+    // Auto-collapse after first test
+    if (!hasUserInteracted) {
+      setHasUserInteracted(true);
+      setIsDatasetSelectorExpanded(false);
+    }
 
     setIsEvaluating(true);
     setEvaluationScore(null);
@@ -127,7 +141,7 @@ export function ChatInterface() {
       setIsEvaluating(false);
       setEvaluationProgress({ current: 0, total: 0 });
     }
-  }, [isEvaluating, isLoading, documentSet, strategy, useReranking, clearMessages, startEvaluationQuestion, appendEvaluationToken, completeEvaluationQuestion]);
+  }, [isEvaluating, isLoading, documentSet, strategy, useReranking, clearMessages, startEvaluationQuestion, appendEvaluationToken, completeEvaluationQuestion, hasUserInteracted]);
 
   const allDocuments = [...sampleDocuments, ...uploadedDocuments];
   const hasSampleDocs = sampleDocuments.length > 0;
@@ -243,6 +257,8 @@ export function ChatInterface() {
           isEvaluating={isEvaluating}
           evaluationProgress={evaluationProgress}
           isReady={isReady}
+          isExpanded={isDatasetSelectorExpanded}
+          onToggleExpand={() => setIsDatasetSelectorExpanded(!isDatasetSelectorExpanded)}
         />
 
         {/* Messages area */}
