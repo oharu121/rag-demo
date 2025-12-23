@@ -9,25 +9,72 @@ import { ChunkViewer } from "./ChunkViewer";
 import { ScoringAnnotation } from "./ScoringAnnotation";
 
 /**
- * Renders message content with inline citations styled in blue
- * Citations like [filename.txt:10-20] are highlighted
+ * Check if a bracketed text is a citation
+ * Handles multiple formats:
+ * - Standard: [file.md:10] or [file.md:10-20]
+ * - Japanese: [出典: file, X-Y行目] or [出典: file, X-Y行目]
  */
-function renderContentWithCitations(content: string): React.ReactNode {
-  const citationRegex = /(\[[^\]:\s]+:\d+-\d+\])/g;
-  const parts = content.split(citationRegex);
+function isCitation(text: string): boolean {
+  // Standard format: [file.md:10] or [file.md:10-20]
+  if (/^\[[^\]]+:\d+(-\d+)?\]$/.test(text)) return true;
+  // Japanese format with 行目: [出典: file, 121-162行目]
+  if (/^\[出典[：:].+\d+.*行目\]$/.test(text)) return true;
+  return false;
+}
 
-  return parts.map((part, index) => {
-    if (citationRegex.test(part)) {
-      // Reset regex lastIndex since we're reusing it
-      citationRegex.lastIndex = 0;
-      return (
-        <span key={index} className="text-blue-600 font-medium">
-          {part}
-        </span>
+/**
+ * Renders message content with simple inline formatting:
+ * - Citations [file:10-20] → blue text
+ * - Bold **text** → <strong>
+ * Preserves whitespace and line breaks via CSS whitespace-pre-wrap
+ */
+function renderContent(content: string): React.ReactNode {
+  // Combined regex for citations and bold text
+  // Group 1: citations [...]
+  // Group 2: bold **...**
+  const regex = /(\[[^\]]+\])|(\*\*[^*]+\*\*)/g;
+
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(content)) !== null) {
+    // Add text before match
+    if (match.index > lastIndex) {
+      parts.push(content.slice(lastIndex, match.index));
+    }
+
+    if (match[1]) {
+      // Citation match
+      if (isCitation(match[1])) {
+        parts.push(
+          <span key={match.index} className="text-blue-600 font-medium">
+            {match[1]}
+          </span>
+        );
+      } else {
+        // Not a citation, render as plain text
+        parts.push(match[1]);
+      }
+    } else if (match[2]) {
+      // Bold match - remove ** markers
+      const boldText = match[2].slice(2, -2);
+      parts.push(
+        <strong key={match.index} className="font-semibold">
+          {boldText}
+        </strong>
       );
     }
-    return part;
-  });
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text
+  if (lastIndex < content.length) {
+    parts.push(content.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : content;
 }
 
 interface MessageBubbleProps {
@@ -76,7 +123,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
         <div className="bg-white text-gray-800 rounded-2xl rounded-tl-md shadow-md border border-gray-100 px-5 py-3.5 transition-all duration-200 hover:shadow-lg">
           {/* Message content */}
           <div className="whitespace-pre-wrap wrap-break-word leading-relaxed text-gray-700">
-            {renderContentWithCitations(message.content)}
+            {renderContent(message.content)}
             {message.isStreaming && (
               <span className="inline-block w-0.5 h-5 ml-1 bg-current animate-typing-cursor rounded-full" />
             )}
