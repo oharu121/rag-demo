@@ -11,9 +11,9 @@ import { DocumentDrawer } from "./DocumentDrawer";
 import { DocumentPreviewModal } from "./DocumentPreviewModal";
 import { DocumentChipsBar } from "./DocumentChipsBar";
 import { ServerStartingOverlay } from "./ServerStartingOverlay";
-import { OnboardingTooltip } from "./OnboardingTooltip";
-import { PreviewHintCallout } from "./PreviewHintCallout";
-import { UploadGuideCallout } from "./UploadGuideCallout";
+import { WelcomeCallout } from "./WelcomeCallout";
+import { ChatCallout } from "./ChatCallout";
+import { DocumentsCallout } from "./DocumentsCallout";
 import { DatasetSelector } from "./DatasetSelector";
 import { EvaluationSummaryBubble } from "./EvaluationSummaryBubble";
 import { streamEvaluation } from "@/lib/api";
@@ -35,11 +35,10 @@ export function ChatInterface() {
   } = useChat();
   const { isReady, isStarting } = useServerStatus();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [showOnboarding, setShowOnboarding] = useState(true);
-  const [showPreviewHint, setShowPreviewHint] = useState(false);
-  const [showUploadGuide, setShowUploadGuide] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
+  const [showChatCallout, setShowChatCallout] = useState(false);
+  const [showDocuments, setShowDocuments] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
-  const [rebuildButtonRef, setRebuildButtonRef] = useState<HTMLButtonElement | null>(null);
   const [documentSet, setDocumentSet] = useState<DocumentSet>("original");
   const [strategy, setStrategy] = useState<ChunkingStrategy>("standard");
   const [useReranking, setUseReranking] = useState<boolean>(false);
@@ -54,7 +53,8 @@ export function ChatInterface() {
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const documentButtonRef = useRef<HTMLButtonElement>(null);
-  const documentChipsRef = useRef<HTMLDivElement>(null);
+  const datasetSelectorRef = useRef<HTMLDivElement>(null);
+  const chatInputContainerRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<ChatInputRef>(null);
 
   const totalDocuments = sampleDocuments.length + uploadedDocuments.length;
@@ -227,7 +227,7 @@ export function ChatInterface() {
                          text-gray-700 bg-white/80 rounded-xl border border-gray-200/60
                          hover:bg-white hover:border-gray-300 hover:shadow-lg
                          active:scale-[0.98] transition-all duration-200
-                         ${showOnboarding ? "animate-pulse-glow" : ""}`}
+                         ${showWelcome ? "animate-pulse-glow" : ""}`}
               >
                 <svg
                   className="w-5 h-5 text-gray-500 group-hover:text-blue-600 transition-colors"
@@ -258,28 +258,29 @@ export function ChatInterface() {
 
         {/* Persistent document chips bar */}
         <DocumentChipsBar
-          ref={documentChipsRef}
           documents={allDocuments}
           onPreview={setPreviewDoc}
           onShowMore={() => setIsDrawerOpen(true)}
         />
 
         {/* Dataset selector bar */}
-        <DatasetSelector
-          documentSet={documentSet}
-          strategy={strategy}
-          useReranking={useReranking}
-          onDocumentSetChange={handleDocumentSetChange}
-          onStrategyChange={setStrategy}
-          onUseRerankingChange={setUseReranking}
-          disabled={isLoading}
-          onRunEvaluation={handleRunEvaluation}
-          isEvaluating={isEvaluating}
-          evaluationProgress={evaluationProgress}
-          isReady={isReady}
-          isExpanded={isDatasetSelectorExpanded}
-          onToggleExpand={() => setIsDatasetSelectorExpanded(!isDatasetSelectorExpanded)}
-        />
+        <div ref={datasetSelectorRef}>
+          <DatasetSelector
+            documentSet={documentSet}
+            strategy={strategy}
+            useReranking={useReranking}
+            onDocumentSetChange={handleDocumentSetChange}
+            onStrategyChange={setStrategy}
+            onUseRerankingChange={setUseReranking}
+            disabled={isLoading}
+            onRunEvaluation={handleRunEvaluation}
+            isEvaluating={isEvaluating}
+            evaluationProgress={evaluationProgress}
+            isReady={isReady}
+            isExpanded={isDatasetSelectorExpanded}
+            onToggleExpand={() => setIsDatasetSelectorExpanded(!isDatasetSelectorExpanded)}
+          />
+        </div>
 
         {/* Messages area */}
         <main className="flex-1 overflow-y-auto">
@@ -431,56 +432,50 @@ export function ChatInterface() {
         </main>
 
         {/* Input area */}
-        <ChatInput ref={chatInputRef} onSend={handleSendMessage} disabled={isLoading || isEvaluating || !isReady} />
+        <div ref={chatInputContainerRef}>
+          <ChatInput ref={chatInputRef} onSend={handleSendMessage} disabled={isLoading || isEvaluating || !isReady} />
+        </div>
 
         {/* Document drawer */}
         <DocumentDrawer
           isOpen={isDrawerOpen}
           onClose={() => setIsDrawerOpen(false)}
           documentsHook={documentsHook}
-          onRebuildButtonRef={setRebuildButtonRef}
         />
 
-        {/* Onboarding tooltip - only show when server is ready and not starting */}
-        {!isStarting && showOnboarding && (
-          <OnboardingTooltip
-            documentCount={totalDocuments}
+        {/* Callout 1: Settings + Test - show when server is ready and not starting */}
+        {!isStarting && showWelcome && (
+          <WelcomeCallout
             onDismiss={() => {
-              setShowOnboarding(false);
-              // Show preview hint after onboarding if there are documents
-              if (totalDocuments > 0) {
-                setTimeout(() => setShowPreviewHint(true), 300);
-              }
+              setShowWelcome(false);
+              // Show chat callout after welcome
+              setTimeout(() => setShowChatCallout(true), 300);
             }}
-            targetRef={documentButtonRef}
+            targetRef={datasetSelectorRef}
           />
         )}
 
-        {/* Preview hint callout - show after onboarding is dismissed */}
-        {showPreviewHint && totalDocuments > 0 && (
-          <PreviewHintCallout
+        {/* Callout 2: Chat + Chunks - show after welcome is dismissed */}
+        {showChatCallout && (
+          <ChatCallout
             onDismiss={() => {
-              setShowPreviewHint(false);
-              // Show upload guide after preview hint
-              setTimeout(() => {
-                setShowUploadGuide(true);
-                setIsDrawerOpen(true);
-              }, 300);
+              setShowChatCallout(false);
+              // Show documents callout after chat
+              setTimeout(() => setShowDocuments(true), 300);
             }}
-            targetRef={documentChipsRef}
+            targetRef={chatInputContainerRef}
           />
         )}
 
-        {/* Upload guide callout - show after preview hint, opens drawer */}
-        {showUploadGuide && isDrawerOpen && (
-          <UploadGuideCallout
+        {/* Callout 3: Documents - show after chat callout is dismissed */}
+        {showDocuments && (
+          <DocumentsCallout
             onDismiss={() => {
-              setShowUploadGuide(false);
-              setIsDrawerOpen(false);
+              setShowDocuments(false);
               // Focus chat input after tutorial completes
               setTimeout(() => chatInputRef.current?.focus(), 100);
             }}
-            targetRef={rebuildButtonRef}
+            targetRef={documentButtonRef}
           />
         )}
 

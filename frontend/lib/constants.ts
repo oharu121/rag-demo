@@ -59,18 +59,21 @@ export const UI_TEXT = {
   sourceLabel: "出典",
   linesLabel: "行",
 
-  // Onboarding
-  onboardingMessage: "すぐに質問を始められます。自分のドキュメントをアップロードすることもできます。",
+  // Callout 1: Settings + Test
+  welcomeCalloutTitle: "設定と精度テスト",
+  welcomeCalloutMessage: "データセットと検索戦略を選択し、「精度テスト」で各設定の正解率を比較できます。",
+  calloutDismiss: "OK",
+
+  // Callout 2: Chat + Chunks
+  chatCalloutTitle: "自由に質問",
+  chatCalloutMessage: "直接質問すると、検索されたチャンクの詳細を確認できます。RAGの動作を理解するのに役立ちます。",
+
+  // Callout 3: Documents
+  documentsCalloutTitle: "ドキュメント一覧",
+  documentsCalloutMessage: "全ドキュメントの確認とインデックスの再構築ができます。",
+
+  // Legacy (keep for backwards compatibility)
   onboardingDismiss: "OK",
-  manageDocuments: "ドキュメントを管理",
-
-  // Preview hint callout
-  previewHintTitle: "ドキュメントをプレビュー",
-  previewHintMessage: "クリックするとドキュメントの内容を確認できます。",
-
-  // Upload guide callout
-  uploadGuideTitle: "ドキュメントをアップロード",
-  uploadGuideMessage: "ファイルをアップロード後、「インデックスを再構築」ボタンを押すと検索対象に追加されます。",
 
   // Welcome screen
   welcomeWithDocs: "以下のドキュメントについて質問できます",

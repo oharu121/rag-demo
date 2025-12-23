@@ -3,30 +3,30 @@
 import { useState, useEffect, RefObject } from "react";
 import { UI_TEXT } from "@/lib/constants";
 
-interface PreviewHintCalloutProps {
+interface ChatCalloutProps {
   onDismiss: () => void;
   targetRef: RefObject<HTMLDivElement | null>;
 }
 
-export function PreviewHintCallout({
+export function ChatCallout({
   onDismiss,
   targetRef,
-}: PreviewHintCalloutProps) {
+}: ChatCalloutProps) {
   const [isVisible, setIsVisible] = useState(false);
-  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const [position, setPosition] = useState({ bottom: 0, left: 0 });
 
   useEffect(() => {
-    // Small delay to let the page render first
+    // Small delay to let the previous callout fade out
     const timer = setTimeout(() => setIsVisible(true), 300);
     return () => clearTimeout(timer);
   }, []);
 
-  // Calculate position based on target element
+  // Calculate position above the chat input
   useEffect(() => {
     if (isVisible && targetRef.current) {
       const rect = targetRef.current.getBoundingClientRect();
       setPosition({
-        top: rect.bottom + 12, // 12px below the target
+        bottom: window.innerHeight - rect.top + 12, // 12px above the input
         left: rect.left + rect.width / 2, // Center horizontally
       });
     }
@@ -43,28 +43,29 @@ export function PreviewHintCallout({
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/20 z-40 animate-fade-in"
+        className="fixed inset-0 bg-black/25 z-40 animate-fade-in"
         onClick={handleDismiss}
       />
 
-      {/* Callout anchored below target */}
+      {/* Callout anchored above chat input */}
       <div
-        className="fixed z-50 animate-fade-in-down -translate-x-1/2"
+        className="fixed z-50 animate-fade-in-up -translate-x-1/2"
         style={{
-          top: position.top,
+          bottom: position.bottom,
           left: position.left,
           animationDelay: "100ms",
         }}
       >
         <div className="relative bg-white rounded-2xl shadow-2xl p-4 max-w-xs border border-gray-100">
-          {/* Arrow pointing up toward target */}
+          {/* Arrow pointing down toward chat input */}
           <div
-            className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-l border-t border-gray-100 transform rotate-45"
+            className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-white border-r border-b border-gray-100 transform rotate-45"
           />
 
           {/* Content */}
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-xl bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-500/25">
+              {/* Chat bubble icon */}
               <svg
                 className="w-5 h-5 text-white"
                 fill="none"
@@ -75,22 +76,16 @@ export function PreviewHintCallout({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                />
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                 />
               </svg>
             </div>
             <div className="flex-1">
               <h3 className="font-semibold text-gray-900 text-sm mb-1">
-                {UI_TEXT.previewHintTitle}
+                {UI_TEXT.chatCalloutTitle}
               </h3>
               <p className="text-xs text-gray-500 leading-relaxed">
-                {UI_TEXT.previewHintMessage}
+                {UI_TEXT.chatCalloutMessage}
               </p>
             </div>
           </div>
@@ -103,7 +98,7 @@ export function PreviewHintCallout({
                      hover:from-indigo-600 hover:to-purple-700 hover:shadow-lg
                      active:scale-[0.98] transition-all duration-200"
           >
-            {UI_TEXT.onboardingDismiss}
+            {UI_TEXT.calloutDismiss}
           </button>
         </div>
       </div>
