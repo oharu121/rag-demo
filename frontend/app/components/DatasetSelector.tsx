@@ -331,7 +331,7 @@ export function DatasetSelector({
                        transition-all duration-200 flex items-center justify-center gap-2
                        ${isEvaluating
                          ? "bg-blue-100 text-blue-700 border border-blue-200"
-                         : "bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 hover:shadow-xl active:scale-[0.99]"
+                         : "bg-linear-to-r from-blue-500 to-indigo-600 text-white hover:from-blue-600 hover:to-indigo-700 hover:shadow-xl active:scale-[0.99]"
                        }
                        disabled:opacity-50 disabled:cursor-not-allowed`}
           >
