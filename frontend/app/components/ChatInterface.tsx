@@ -108,11 +108,9 @@ export function ChatInterface() {
   const handleRunEvaluation = useCallback(async () => {
     if (isEvaluating || isLoading) return;
 
-    // Auto-collapse after first test
-    if (!hasUserInteracted) {
-      setHasUserInteracted(true);
-      setIsDatasetSelectorExpanded(false);
-    }
+    // Always collapse when running evaluation
+    setHasUserInteracted(true);
+    setIsDatasetSelectorExpanded(false);
 
     setIsEvaluating(true);
     setEvaluationScore(null);
