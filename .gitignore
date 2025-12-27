@@ -49,7 +49,7 @@ dist/
 venv/
 
 # uv
-uv.lock
+# Note: uv.lock should be committed for reproducible builds
 
 # Chroma database
 chroma_db/
