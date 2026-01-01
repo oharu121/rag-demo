@@ -23,7 +23,15 @@ def get_client_ip(request: Request) -> str:
     return request.client.host if request.client else "unknown"
 
 
-@router.post("")
+@router.post(
+    "",
+    summary="Send chat message",
+    description="RAG-powered chat endpoint with SSE streaming. Returns sources, tokens, and completion events.",
+    responses={
+        200: {"description": "SSE stream with tokens, sources, and completion events"},
+        429: {"model": ErrorResponse, "description": "Rate limit exceeded"},
+    },
+)
 async def chat(request: Request, chat_request: ChatRequest):
     """
     RAGチャットエンドポイント（ストリーミング対応）

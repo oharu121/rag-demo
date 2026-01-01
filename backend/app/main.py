@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 
 from app.config import get_settings
 from app.routers import chat, documents, evaluation, health
@@ -121,12 +121,14 @@ app.include_router(evaluation.router, prefix="/api")
 # ルートエンドポイント
 @app.get("/")
 async def root():
-    """ルートエンドポイント"""
-    return {
-        "message": "RAG Backend API",
-        "docs": "/docs",
-        "health": "/api/health",
-    }
+    """Redirect to API documentation"""
+    return RedirectResponse(url="/docs")
+
+
+@app.get("/healthz")
+async def healthz():
+    """Lightweight liveness probe for keep-alive pings"""
+    return PlainTextResponse("ok")
 
 
 if __name__ == "__main__":

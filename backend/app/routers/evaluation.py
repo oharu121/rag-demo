@@ -123,7 +123,7 @@ class EvaluationResponse(BaseModel):
     results: DatasetResult
 
 
-@router.post("/quick", response_model=EvaluationResponse)
+@router.post("/quick", summary="Run quick evaluation", response_model=EvaluationResponse)
 async def run_quick_evaluation(
     document_set: str = "original",
     strategy: str = "standard",
@@ -245,7 +245,7 @@ async def run_quick_evaluation(
         raise HTTPException(status_code=500, detail=f"Evaluation failed: {str(e)}")
 
 
-@router.get("/queries")
+@router.get("/queries", summary="Get test queries")
 async def get_test_queries():
     """Get the list of test queries (for frontend to display questions)."""
     try:
@@ -264,7 +264,7 @@ async def get_test_queries():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/stream")
+@router.get("/stream", summary="Stream evaluation results")
 async def stream_evaluation(
     document_set: str = "original",
     strategy: str = "standard",

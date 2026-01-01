@@ -12,7 +12,7 @@ from app.services.document_service import get_document_service
 router = APIRouter(tags=["health"])
 
 
-@router.get("/health", response_model=HealthResponse)
+@router.get("/health", summary="Health check", response_model=HealthResponse)
 async def health_check() -> HealthResponse:
     """ヘルスチェックエンドポイント"""
     embedding_service = get_embedding_service()

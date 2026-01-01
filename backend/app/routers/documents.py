@@ -24,7 +24,7 @@ from app.utils.errors import DocumentException, RAGException, ErrorMessages
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
-@router.get("/debug/routes")
+@router.get("/debug/routes", include_in_schema=False)
 async def debug_routes():
     """デバッグ用: ルート確認"""
     return {
@@ -42,7 +42,7 @@ async def debug_routes():
     }
 
 
-@router.get("/debug/test-content/{doc_id}")
+@router.get("/debug/test-content/{doc_id}", include_in_schema=False)
 async def debug_test_content(doc_id: str):
     """デバッグ用: コンテンツエンドポイントのテスト"""
     print(f"[DEBUG] debug_test_content called with doc_id: {doc_id}", flush=True)
@@ -56,7 +56,7 @@ async def debug_test_content(doc_id: str):
     }
 
 
-@router.get("", response_model=DocumentListResponse)
+@router.get("", summary="List documents", response_model=DocumentListResponse)
 async def list_documents(
     document_set: str = Query("original", description="Document set to list: 'original' or 'optimized'")
 ) -> DocumentListResponse:
@@ -84,7 +84,7 @@ async def list_documents(
     )
 
 
-@router.post("/upload", response_model=DocumentUploadResponse)
+@router.post("/upload", summary="Upload document", response_model=DocumentUploadResponse)
 async def upload_document(file: UploadFile = File(...)) -> DocumentUploadResponse:
     """新しいドキュメントをアップロード"""
     if not file.filename:
@@ -108,7 +108,7 @@ async def upload_document(file: UploadFile = File(...)) -> DocumentUploadRespons
         raise HTTPException(status_code=400, detail=e.message)
 
 
-@router.get("/{doc_id}/content", response_model=DocumentContentResponse)
+@router.get("/{doc_id}/content", summary="Get document content", response_model=DocumentContentResponse)
 async def get_document_content(doc_id: str) -> DocumentContentResponse:
     """ドキュメントの内容を取得"""
     print(f"[DEBUG] get_document_content called with doc_id: {doc_id}", flush=True)
@@ -132,7 +132,7 @@ async def get_document_content(doc_id: str) -> DocumentContentResponse:
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/{doc_id}", response_model=DocumentDeleteResponse)
+@router.delete("/{doc_id}", summary="Delete document", response_model=DocumentDeleteResponse)
 async def delete_document(doc_id: str) -> DocumentDeleteResponse:
     """アップロードされたドキュメントを削除"""
     try:
@@ -147,7 +147,7 @@ async def delete_document(doc_id: str) -> DocumentDeleteResponse:
         raise HTTPException(status_code=404, detail=e.message)
 
 
-@router.post("/rebuild", response_model=RebuildResponse)
+@router.post("/rebuild", summary="Rebuild vector store", response_model=RebuildResponse)
 async def rebuild_vectorstore() -> RebuildResponse:
     """ベクトルストアを再構築"""
     try:
@@ -163,14 +163,14 @@ async def rebuild_vectorstore() -> RebuildResponse:
         raise HTTPException(status_code=400, detail=e.message)
 
 
-@router.get("/options")
+@router.get("/options", summary="Get available options")
 async def get_options():
     """Get available strategies, document sets, and collections for the UI"""
     rag_service = get_rag_service()
     return rag_service.get_available_options()
 
 
-@router.post("/build-all")
+@router.post("/build-all", summary="Pre-build all collections")
 async def build_all_collections():
     """
     Pre-build all vector collections for faster switching.

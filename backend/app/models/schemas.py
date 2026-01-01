@@ -14,102 +14,124 @@ from app.config import ChunkingStrategy, DocumentSet
 class MessageHistory(BaseModel):
     """会話履歴のメッセージ"""
 
-    role: Literal["user", "assistant"]
-    content: str
+    role: Literal["user", "assistant"] = Field(
+        ..., description="Message sender role"
+    )
+    content: str = Field(
+        ..., description="Message content"
+    )
 
 
 class ChatRequest(BaseModel):
     """チャットリクエスト"""
 
-    message: str = Field(..., min_length=1, max_length=2000)
-    history: list[MessageHistory] = Field(default_factory=list)
-    document_set: Optional[DocumentSet] = None
-    strategy: Optional[ChunkingStrategy] = None
-    use_reranking: Optional[bool] = None  # Enable cross-encoder reranking
+    message: str = Field(
+        ...,
+        min_length=1,
+        max_length=2000,
+        description="The user's question to ask the RAG system",
+        json_schema_extra={"example": "契約社員の有給休暇は何日ですか？"},
+    )
+    history: list[MessageHistory] = Field(
+        default_factory=list,
+        description="Previous conversation messages for context",
+    )
+    document_set: Optional[DocumentSet] = Field(
+        None,
+        description="Document set to search: 'original' or 'optimized'",
+    )
+    strategy: Optional[ChunkingStrategy] = Field(
+        None,
+        description="Chunking strategy: 'standard', 'large', or 'parent_child'",
+    )
+    use_reranking: Optional[bool] = Field(
+        None,
+        description="Enable cross-encoder reranking for improved relevance",
+    )
 
 
 class Source(BaseModel):
     """引用元情報"""
 
-    filename: str
-    start_line: int
-    end_line: int
-    content_preview: str
+    filename: str = Field(..., description="Source document filename")
+    start_line: int = Field(..., description="Starting line number in document")
+    end_line: int = Field(..., description="Ending line number in document")
+    content_preview: str = Field(..., description="Preview of the matched content")
 
 
 class ChatResponse(BaseModel):
     """チャットレスポンス（非ストリーミング用）"""
 
-    answer: str
-    sources: list[Source]
-    processing_time_ms: int
+    answer: str = Field(..., description="Generated answer from the RAG system")
+    sources: list[Source] = Field(..., description="Source documents used for the answer")
+    processing_time_ms: int = Field(..., description="Processing time in milliseconds")
 
 
 # Document schemas
 class DocumentInfo(BaseModel):
     """ドキュメント情報"""
 
-    id: str
-    filename: str
-    type: Literal["sample", "uploaded"]
-    status: Literal["ready", "processing", "error"]
-    line_count: int = 0
+    id: str = Field(..., description="Unique document identifier")
+    filename: str = Field(..., description="Document filename")
+    type: Literal["sample", "uploaded"] = Field(..., description="Document type")
+    status: Literal["ready", "processing", "error"] = Field(..., description="Processing status")
+    line_count: int = Field(0, description="Number of lines in document")
 
 
 class DocumentListResponse(BaseModel):
     """ドキュメント一覧レスポンス"""
 
-    documents: list[DocumentInfo]
-    total: int
+    documents: list[DocumentInfo] = Field(..., description="List of documents")
+    total: int = Field(..., description="Total number of documents")
 
 
 class DocumentUploadResponse(BaseModel):
     """ドキュメントアップロードレスポンス"""
 
-    id: str
-    filename: str
-    status: str
-    message: str
+    id: str = Field(..., description="Uploaded document ID")
+    filename: str = Field(..., description="Uploaded filename")
+    status: str = Field(..., description="Upload status")
+    message: str = Field(..., description="Status message")
 
 
 class DocumentDeleteResponse(BaseModel):
     """ドキュメント削除レスポンス"""
 
-    success: bool
-    message: str
+    success: bool = Field(..., description="Whether deletion succeeded")
+    message: str = Field(..., description="Status message")
 
 
 class DocumentContentResponse(BaseModel):
     """ドキュメント内容レスポンス"""
 
-    id: str
-    filename: str
-    content: str
-    line_count: int
+    id: str = Field(..., description="Document ID")
+    filename: str = Field(..., description="Document filename")
+    content: str = Field(..., description="Full document content")
+    line_count: int = Field(..., description="Number of lines")
 
 
 class RebuildResponse(BaseModel):
     """再構築レスポンス"""
 
-    status: str
-    chunk_count: int
-    message: str
+    status: str = Field(..., description="Rebuild status")
+    chunk_count: int = Field(..., description="Number of chunks created")
+    message: str = Field(..., description="Status message")
 
 
 # Health schemas
 class HealthResponse(BaseModel):
     """ヘルスチェックレスポンス"""
 
-    status: str
-    model_loaded: bool
-    vectorstore_ready: bool
-    document_count: int
+    status: str = Field(..., description="Service status", json_schema_extra={"example": "ok"})
+    model_loaded: bool = Field(..., description="Whether embedding model is loaded")
+    vectorstore_ready: bool = Field(..., description="Whether vector store is initialized")
+    document_count: int = Field(..., description="Number of indexed documents")
 
 
 # Error schemas
 class ErrorResponse(BaseModel):
     """エラーレスポンス"""
 
-    error: str
-    code: str
-    detail: str | None = None
+    error: str = Field(..., description="Error message")
+    code: str = Field(..., description="Error code", json_schema_extra={"example": "RATE_LIMIT_EXCEEDED"})
+    detail: str | None = Field(None, description="Additional error details")
