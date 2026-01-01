@@ -4,14 +4,10 @@ Tests for health check and root endpoints.
 
 
 def test_root_endpoint(client):
-    """Test root endpoint returns API info."""
-    response = client.get("/")
-    assert response.status_code == 200
-    data = response.json()
-    assert "message" in data
-    assert data["message"] == "RAG Backend API"
-    assert "docs" in data
-    assert "health" in data
+    """Test root endpoint redirects to Swagger docs."""
+    response = client.get("/", follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers["location"] == "/docs"
 
 
 def test_health_endpoint(client):
