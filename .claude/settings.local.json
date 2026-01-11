@@ -21,7 +21,11 @@
       "mcp__chrome-devtools__list_pages",
       "mcp__chrome-devtools__get_network_request",
       "mcp__chrome-devtools__wait_for",
-      "WebSearch"
+      "WebSearch",
+      "Bash(git log:*)",
+      "Bash(npm audit:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh api:*)"
     ],
     "deny": [],
     "ask": []
