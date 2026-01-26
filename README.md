@@ -2,10 +2,6 @@
 
 RAG（Retrieval-Augmented Generation）を活用したドキュメント検索システムのデモアプリケーションです。社内ドキュメントに対して自然言語で質問でき、根拠のある回答を得ることができます。
 
-## デモ
-
-**Live Demo**: [https://rag-demo.vercel.app](https://rag-demo.vercel.app)
-
 ## 技術スタック
 
 | レイヤー | 技術 | 選定理由 |
