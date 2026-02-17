@@ -380,7 +380,7 @@ Push failed. Run manually:
 
 If No: Inform user "Remember to push manually: git push && git push --tags"
 
-### Step 17: Create GitHub Release (Draft)
+### Step 17: Create GitHub Release
 
 **Skip this step if version was skipped.**
 
@@ -407,7 +407,6 @@ Prepare the release body by taking the plan file content and removing the `# Pla
 ```bash
 gh release create v<version> \
   --title "<version> - <plan-title>" \
-  --draft \
   --notes "<plan-content-without-header>"
 ```
 
@@ -429,10 +428,7 @@ Release complete!
 Issue: <issue-url>
 Version: <old-version> -> <new-version>
 Tag: v<new-version>
-Release (draft): <github-release-url>
-
-The release was created as a draft. Review and publish at:
-  https://github.com/<owner>/<repo>/releases
+Release: <github-release-url>
 ```
 
 **If version was skipped:**
@@ -487,7 +483,7 @@ User runs `/github-release` after implementing a new feature:
    - Shows changes, confirms commit
    - Bumps version: 1.0.0 -> 1.1.0 (root package.json + backend/pyproject.toml)
    - Pushes to remote
-   - Creates draft GitHub release
+   - Creates GitHub release
 
 3. **Final Output:**
    ```
@@ -496,8 +492,5 @@ User runs `/github-release` after implementing a new feature:
    Issue: https://github.com/oharu121/rag-demo/issues/10
    Version: 1.0.0 -> 1.1.0
    Tag: v1.1.0
-   Release (draft): https://github.com/oharu121/rag-demo/releases/tag/v1.1.0
-
-   The release was created as a draft. Review and publish at:
-     https://github.com/oharu121/rag-demo/releases
+   Release: https://github.com/oharu121/rag-demo/releases/tag/v1.1.0
    ```
