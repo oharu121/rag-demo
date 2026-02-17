@@ -408,6 +408,23 @@ class RAGService:
                     delay = gemini_error.retry_after or (base_delay * (2 ** attempt))
                     print(f"Gemini API rate limited. Retrying in {delay:.1f}s (attempt {attempt + 1}/{max_retries})", flush=True)
                     await asyncio.sleep(delay)
+                except TypeError as e:
+                    # langchain-google-genai の一時的なエラー
+                    # (例: 'Response' object is not subscriptable)
+                    if attempt < max_retries:
+                        delay = base_delay * (2 ** attempt)
+                        print(f"LLM TypeError (attempt {attempt + 1}/{max_retries}): {e}. Retrying in {delay:.1f}s", flush=True)
+                        await asyncio.sleep(delay)
+                    else:
+                        print(f"LLM error after {max_retries + 1} attempts: {e}", flush=True)
+                        await queue.put({
+                            "type": "error",
+                            "data": {
+                                "message": ErrorMessages.LLM_ERROR,
+                                "code": "LLM_ERROR",
+                            },
+                        })
+                        break
                 except Exception as e:
                     # その他のエラー - リトライしない
                     print(f"LLM error: {e}", flush=True)
@@ -614,12 +631,14 @@ class RAGService:
         # Build and run chain
         chain = prompt | llm | StrOutputParser()
 
+        invoke_params = {
+            "context": context,
+            "question": question,
+            "history_section": history_section,
+        }
+
         try:
-            answer = chain.invoke({
-                "context": context,
-                "question": question,
-                "history_section": history_section,
-            })
+            answer = chain.invoke(invoke_params)
         except ResourceExhausted as e:
             gemini_error = classify_gemini_error(e)
             return {
@@ -627,6 +646,18 @@ class RAGService:
                 "chunks": chunks_info,
                 "error": gemini_error.code,
             }
+        except TypeError as e:
+            # langchain-google-genai の一時的なエラー - 1回リトライ
+            print(f"LLM TypeError, retrying: {e}", flush=True)
+            time.sleep(2)
+            try:
+                answer = chain.invoke(invoke_params)
+            except Exception as retry_e:
+                return {
+                    "answer": f"エラーが発生しました: {str(retry_e)}",
+                    "chunks": chunks_info,
+                    "error": "LLM_ERROR",
+                }
         except Exception as e:
             return {
                 "answer": f"エラーが発生しました: {str(e)}",

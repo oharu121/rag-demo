@@ -25,7 +25,14 @@
       "Bash(git log:*)",
       "Bash(npm audit:*)",
       "Bash(gh pr view:*)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(gh issue create:*)",
+      "Bash(git fetch:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run test:backend:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm version:*)"
     ],
     "deny": [],
     "ask": []
