@@ -91,13 +91,13 @@ uv run uvicorn app.main:app --reload --port 7860
 cd frontend
 
 # 依存関係をインストール
-npm install
+pnpm install
 
 # 環境変数を設定（任意）
 # NEXT_PUBLIC_API_URL=http://localhost:7860
 
 # 開発サーバーを起動
-npm run dev
+pnpm run dev
 ```
 
 ブラウザで http://localhost:3000 を開いてください。
@@ -196,7 +196,7 @@ uv run pytest
 
 ```bash
 cd frontend
-npm run build
+pnpm run build
 ```
 
 ## 学んだこと

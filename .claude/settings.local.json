@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run build:*)",
+      "Bash(pnpm run build:*)",
       "Bash(npx tsc:*)",
       "Bash(cd:*)",
       "Bash(cat:*)",
@@ -23,19 +23,21 @@
       "mcp__chrome-devtools__wait_for",
       "WebSearch",
       "Bash(git log:*)",
-      "Bash(npm audit:*)",
+      "Bash(pnpm audit:*)",
       "Bash(gh pr view:*)",
       "Bash(gh api:*)",
       "Bash(gh issue create:*)",
       "Bash(git fetch:*)",
-      "Bash(npm run typecheck:*)",
-      "Bash(npm run test:backend:*)",
+      "Bash(pnpm run typecheck:*)",
+      "Bash(pnpm run test:backend:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(npm version:*)",
+      "Bash(pnpm version:*)",
       "Bash(git push)",
       "Bash(git push:*)",
-      "Bash(gh release create:*)"
+      "Bash(gh release create:*)",
+      "Bash(gh label create:*)"
     ],
     "deny": [],
     "ask": []

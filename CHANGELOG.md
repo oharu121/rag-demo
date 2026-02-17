@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-02-17
+
+### Changed
+- Migrated package manager from npm to pnpm for disk space savings via content-addressable global store
+  - Updated all root scripts from `npm --prefix frontend` to `pnpm -C frontend`
+  - Added `packageManager: "pnpm@10.21.0"` to root package.json
+  - Replaced `package-lock.json` with `pnpm-lock.yaml`
+- Updated CI/CD pipeline (`deploy-frontend.yml`) to use `pnpm/action-setup@v4` and pnpm caching
+- Updated README setup instructions from npm to pnpm
+
+### Fixed
+- Added ESLint flat config (`eslint.config.mjs`) required by ESLint 10 / Next.js 16
+- Downgraded ESLint from `^10` to `^9` to resolve plugin incompatibility with `eslint-plugin-react`
+
 ## [1.1.0] - 2026-02-17
 
 ### Changed
