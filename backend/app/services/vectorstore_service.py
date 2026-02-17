@@ -231,10 +231,10 @@ class VectorStoreService:
             print(f"[Build All] Loaded {len(documents)} documents for {doc_set.value}", flush=True)
 
             for strategy in ChunkingStrategy:
-                # Skip hypothetical_questions for optimized dataset
-                # (only apply to original dataset - the harder test case)
-                if strategy == ChunkingStrategy.HYPOTHETICAL_QUESTIONS and doc_set != DocumentSet.ORIGINAL:
-                    print(f"[Build All] Skipping {strategy.value} for {doc_set.value} (only for original)", flush=True)
+                # Skip hypothetical_questions at startup - build on-demand when user selects it
+                # (saves tokens since each restart would regenerate questions via LLM calls)
+                if strategy == ChunkingStrategy.HYPOTHETICAL_QUESTIONS:
+                    print(f"[Build All] Skipping {strategy.value} (will build on-demand)", flush=True)
                     continue
 
                 collection_name = get_collection_name(doc_set, strategy)
