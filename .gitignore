@@ -94,3 +94,6 @@ backend/app/data/vectorstore/
 backend/app/data/evaluation/results/
 
 nul
+nul
+
+*cache
