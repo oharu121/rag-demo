@@ -11,7 +11,7 @@ dependencies = [
     "pydantic-settings>=2.0",
     # LangChain
     "langchain>=0.3",
-    "langchain-community>=0.3",
+    "langchain-community>=0.4.1",
     "langchain-chroma>=0.1",
     "langchain-google-genai>=4.2.1",
     "google-api-core>=2.0",
