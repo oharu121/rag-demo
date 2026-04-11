@@ -14,7 +14,7 @@ dependencies = [
     "langchain-community>=0.4.1",
     "langchain-chroma>=0.1",
     "langchain-google-genai>=4.2.1",
-    "google-api-core>=2.0",
+    "google-api-core>=2.30.3",
     "langchain-huggingface>=1.2.1",
     # Vector DB & ML
     "chromadb>=0.5",
