@@ -13,9 +13,9 @@
     "test:watch": "vitest --watch"
   },
   "dependencies": {
-    "next": "16.2.4",
-    "react": "19.2.5",
-    "react-dom": "19.2.5"
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -28,11 +28,11 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.1.4",
     "@vitest/coverage-v8": "^4.1.5",
-    "baseline-browser-mapping": "^2.10.25",
+    "baseline-browser-mapping": "^2.10.29",
     "eslint": "^9",
-    "eslint-config-next": "16.2.4",
+    "eslint-config-next": "16.2.6",
     "jsdom": "^29.1.1",
-    "msw": "^2.14.2",
+    "msw": "^2.14.5",
     "tailwindcss": "^4",
     "typescript": "^6",
     "vitest": "^4.1.5"
