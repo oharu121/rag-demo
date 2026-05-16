@@ -27,14 +27,14 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.1.4",
-    "@vitest/coverage-v8": "^4.1.5",
-    "baseline-browser-mapping": "^2.10.29",
+    "@vitest/coverage-v8": "^4.1.6",
+    "baseline-browser-mapping": "^2.10.30",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "jsdom": "^29.1.1",
-    "msw": "^2.14.5",
+    "msw": "^2.14.6",
     "tailwindcss": "^4",
     "typescript": "^6",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.6"
   }
 }
